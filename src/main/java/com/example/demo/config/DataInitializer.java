@@ -8,6 +8,9 @@ import com.example.demo.repository.ClientPortfolioRepository;
 import com.example.demo.repository.FundRepository;
 import com.example.demo.repository.PortfolioHoldingRepository;
 import com.example.demo.repository.PortfolioRecommendationRepository;
+import com.example.demo.repository.StockHoldingRepository;
+import com.example.demo.entity.StockHolding;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +25,9 @@ public class DataInitializer {
     CommandLineRunner initDatabase(FundRepository fundRepo,
                                    ClientPortfolioRepository portfolioRepo,
                                    PortfolioHoldingRepository holdingRepo,
-                                   PortfolioRecommendationRepository recommendationRepo) {
+                                   PortfolioRecommendationRepository recommendationRepo,
+                                   StockHoldingRepository stockRepo) {
+
         return args -> {
             // Check if data already exists
             if (fundRepo.count() > 0) {
@@ -44,11 +49,11 @@ public class DataInitializer {
             fundRepo.saveAll(Arrays.asList(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10));
 
             // 2. Seed Client Portfolios
-            ClientPortfolio p1 = createPortfolio("U1001", "John Smith", "Moderate Risk", 85, 10, 5, 70, 30, 0, "-$72,135.64");
-            ClientPortfolio p2 = createPortfolio("U1002", "Emma Davis", "High Risk", 40, 20, 40, 60, 20, 20, "-$15,420.00");
-            ClientPortfolio p3 = createPortfolio("U1003", "Michael Chen", "Low Risk", 20, 0, 80, 40, 10, 50, "+$4,500.50");
-            ClientPortfolio p4 = createPortfolio("U1004", "Sophia Patel", "Aggressive", 95, 5, 0, 80, 15, 5, "-$112,000.00");
-            ClientPortfolio p5 = createPortfolio("U1005", "Liam Wilson", "Balanced", 60, 20, 20, 60, 20, 20, "$0.00");
+            ClientPortfolio p1 = createPortfolio("U1001", "John Smith", "Moderate Risk", 85, 10, 5, 70, 30, 0, "-₹60,59,384");
+            ClientPortfolio p2 = createPortfolio("U1002", "Emma Davis", "High Risk", 40, 20, 40, 60, 20, 20, "-₹12,95,280");
+            ClientPortfolio p3 = createPortfolio("U1003", "Michael Chen", "Low Risk", 20, 0, 80, 40, 10, 50, "+₹3,78,042");
+            ClientPortfolio p4 = createPortfolio("U1004", "Sophia Patel", "Aggressive", 95, 5, 0, 80, 15, 5, "-₹94,08,000");
+            ClientPortfolio p5 = createPortfolio("U1005", "Liam Wilson", "Balanced", 60, 20, 20, 60, 20, 20, "₹0.00");
 
             portfolioRepo.saveAll(Arrays.asList(p1, p2, p3, p4, p5));
 
@@ -69,28 +74,67 @@ public class DataInitializer {
             // 4. Seed Recommendations
             recommendationRepo.saveAll(Arrays.asList(
                 // John Smith
-                createRec(p1, "Reliance Industries", "Increase large cap exposure", "add", "+6.20%", "$175,303", "#f97316"),
-                createRec(p1, "TCS", "Concentration in IT sector", "remove", "+6.15%", "$2,111.16", "#1f2937"),
-                createRec(p1, "Sun Pharma", "Healthcare underweight", "add", "+11.5%", "$1,234.40", "#1e3a8a"),
-                createRec(p1, "SpiceJet", "Overweight in airlines sector", "remove", "-1.8%", "$1,545.40", "#eab308"),
+                createRec(p1, "Reliance Industries", "Increase large cap exposure", "add", "+6.20%", "₹1,47,25,452", "#f97316"),
+                createRec(p1, "TCS", "Concentration in IT sector", "remove", "+6.15%", "₹1,77,337", "#1f2937"),
+                createRec(p1, "Sun Pharma", "Healthcare underweight", "add", "+11.5%", "₹1,03,690", "#1e3a8a"),
+                createRec(p1, "SpiceJet", "Overweight in airlines sector", "remove", "-1.8%", "₹1,29,814", "#eab308"),
                 
                 // Emma Davis
-                createRec(p2, "Infosys", "Capitalizing on tech growth", "add", "+12.4%", "$15,000", "#10b981"),
-                createRec(p2, "Govt Bonds", "Reduce debt exposure", "remove", "-0.5%", "$45,000", "#6b7280"),
+                createRec(p2, "Infosys", "Capitalizing on tech growth", "add", "+12.4%", "₹12,60,000", "#10b981"),
+                createRec(p2, "Govt Bonds", "Reduce debt exposure", "remove", "-0.5%", "₹37,80,000", "#6b7280"),
 
                 // Michael Chen
-                createRec(p3, "Gold ETF", "Inflation hedge", "add", "+2.1%", "$5,000", "#f59e0b"),
-                createRec(p3, "HDFC Bank", "Stable banking growth", "add", "+4.5%", "$12,000", "#1f2937"),
+                createRec(p3, "Gold ETF", "Inflation hedge", "add", "+2.1%", "₹4,20,000", "#f59e0b"),
+                createRec(p3, "HDFC Bank", "Stable banking growth", "add", "+4.5%", "₹10,08,000", "#1f2937"),
 
                 // Sophia Patel
-                createRec(p4, "Zomato", "High volatility risk", "remove", "-15.0%", "$25,000", "#f59e0b"),
-                createRec(p4, "Silver ETF", "Diversify commodities", "add", "+1.2%", "$20,000", "#64748b"),
+                createRec(p4, "Zomato", "High volatility risk", "remove", "-15.0%", "₹21,00,000", "#f59e0b"),
+                createRec(p4, "Silver ETF", "Diversify commodities", "add", "+1.2%", "₹16,80,000", "#64748b"),
 
                 // Liam Wilson
-                createRec(p5, "No Action", "Portfolio is perfectly aligned", "none", "0.0%", "$0", "#6b7280")
+                createRec(p5, "No Action", "Portfolio is perfectly aligned", "none", "0.0%", "₹0", "#6b7280")
             ));
+
+            // 5. Seed Stock-Level Holdings for Algorithm
+            // Parag Parikh (f1)
+            seedStock(stockRepo, f1, "HDFC Bank", 9.5, "BFSI", "Large");
+            seedStock(stockRepo, f1, "Reliance Industries", 8.2, "Energy", "Large");
+            seedStock(stockRepo, f1, "ITC", 7.4, "Consumer Goods", "Large");
+            seedStock(stockRepo, f1, "Microsoft", 5.5, "IT", "Large");
+            seedStock(stockRepo, f1, "Infosys", 4.1, "IT", "Large");
+
+            // Nippon Small Cap (f2)
+            seedStock(stockRepo, f2, "HDFC Bank", 1.5, "BFSI", "Large");
+            seedStock(stockRepo, f2, "Cholamandalam", 4.5, "BFSI", "Mid");
+            seedStock(stockRepo, f2, "Tube Investments", 3.8, "Auto", "Mid");
+            seedStock(stockRepo, f2, "Karur Vysya", 2.2, "BFSI", "Small");
+
+            // HDFC Mid-Cap (f3)
+            seedStock(stockRepo, f3, "HDFC Bank", 6.5, "BFSI", "Large");
+            seedStock(stockRepo, f3, "Reliance Industries", 3.2, "Energy", "Large");
+            seedStock(stockRepo, f3, "Axis Bank", 4.2, "BFSI", "Large");
+            seedStock(stockRepo, f3, "Apollo Hospitals", 3.1, "Healthcare", "Mid");
+            seedStock(stockRepo, f3, "The Phoenix Mills", 2.8, "Real Estate", "Mid");
+
+            // SBI Bluechip (f4)
+            seedStock(stockRepo, f4, "HDFC Bank", 8.8, "BFSI", "Large");
+            seedStock(stockRepo, f4, "Reliance Industries", 7.1, "Energy", "Large");
+            seedStock(stockRepo, f4, "ICICI Bank", 6.2, "BFSI", "Large");
+            seedStock(stockRepo, f4, "Infosys", 5.5, "IT", "Large");
+            seedStock(stockRepo, f4, "L&T", 4.1, "Construction", "Large");
         };
     }
+
+    private void seedStock(StockHoldingRepository repo, Fund f, String name, double w, String sector, String mcap) {
+        StockHolding s = new StockHolding();
+        s.setFund(f);
+        s.setStockName(name);
+        s.setWeight(w);
+        s.setSector(sector);
+        s.setMarketCap(mcap);
+        repo.save(s);
+    }
+
 
     private Fund createFund(String name, String category, int m, int r, int mt, String color) {
         Fund f = new Fund();

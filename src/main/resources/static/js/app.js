@@ -139,29 +139,48 @@ function updateUI(data) {
     }
 
     // Update Matrix
-    if (data.matrix) {
-        const getBgClass = (val) => {
-            if (val >= 80) return 'bg-purple-dark';
-            if (val >= 40) return 'bg-purple-medium';
-            if (val >= 20) return 'bg-purple-light';
-            return 'bg-blue-light';
+    if (data.matrix && data.matrix.length > 0) {
+        const getBgStyle = (val) => {
+            if (val === 100) return 'background-color: #2563eb; color: white; font-weight: bold;'; // Dark blue for 100%
+            if (val === 0) return 'background-color: white; color: transparent;'; // Hide upper triangle
+            if (val >= 60) return 'background-color: #3b82f6; color: white;';
+            if (val >= 40) return 'background-color: #60a5fa; color: white;';
+            if (val >= 20) return 'background-color: #93c5fd; color: #1e3a8a;';
+            if (val >= 10) return 'background-color: #bfdbfe; color: #1e3a8a;';
+            return 'background-color: #dbeafe; color: #1e3a8a;'; // Very light blue
         };
 
+        const headerRow = document.getElementById('matrixHeaderRow');
         const matrixBody = document.getElementById('matrixTableBody');
-        matrixBody.innerHTML = data.matrix.map(row => `
+        
+        // 1. Build Headers: Sr, Investment Name, 1, 2, 3...
+        let headerHtml = `<th>Sr</th><th>Investment Name</th>`;
+        for (let i = 1; i <= data.matrix.length; i++) {
+            headerHtml += `<th style="text-align: center; width: 40px;">${i}</th>`;
+        }
+        headerRow.innerHTML = headerHtml;
+
+        // 2. Build Body
+        matrixBody.innerHTML = data.matrix.map((row, i) => `
             <tr>
-                <td>
-                    <div class="icon-wrapper" style="background-color: ${row.iconColor}">
-                        <i data-lucide="activity" style="width: 14px; height: 14px;"></i>
+                <td style="color: var(--text-muted); font-size: 0.8rem;">${i + 1}</td>
+                <td style="min-width: 250px;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div class="icon-wrapper" style="background-color: ${row.iconColor}; width: 24px; height: 24px;">
+                            <i data-lucide="activity" style="width: 12px; height: 12px;"></i>
+                        </div>
+                        <span style="font-size: 0.85rem;">${row.fund}</span>
                     </div>
-                    ${row.fund}
                 </td>
-                <td class="${getBgClass(row.m)}">${row.m}%</td>
-                <td class="${getBgClass(row.r)}">${row.r}%</td>
-                <td class="${getBgClass(row.mt)}">${row.mt}%</td>
+                ${row.overlaps.map((val, j) => `
+                    <td style="text-align: center; padding: 0.5rem; border: 1px solid #f1f5f9; font-size: 0.8rem; ${getBgStyle(val)}">
+                        ${val > 0 ? val : ''}
+                    </td>
+                `).join('')}
             </tr>
         `).join('');
     }
+
 
     // Re-initialize lucide icons for dynamic elements
     if (window.lucide) {
@@ -201,6 +220,33 @@ async function analyzePortfolio() {
             btn.disabled = false;
         }
     }
+}
+
+function renderAgentTrace(trace) {
+    const card = document.getElementById('agentTraceCard');
+    const stepsEl = document.getElementById('agentTraceSteps');
+    if (!trace || !trace.length || !card || !stepsEl) return;
+
+    card.style.display = 'block';
+    stepsEl.innerHTML = '';
+
+    // Render each trace step with a staggered delay so it looks "live"
+    trace.forEach((step, index) => {
+        setTimeout(() => {
+            const div = document.createElement('div');
+            div.className = `trace-step ${step.type}`;
+            div.style.animationDelay = `0ms`; // already staggered by setTimeout
+            div.innerHTML = `
+                <div class="trace-step-content">
+                    <div class="trace-step-title">${step.title}</div>
+                    <div class="trace-step-detail">${step.detail}</div>
+                </div>
+            `;
+            stepsEl.appendChild(div);
+        }, index * 200); // 200ms stagger between each step
+    });
+
+    if (window.lucide) lucide.createIcons();
 }
 
 function toggleCartItem(btn, action) {

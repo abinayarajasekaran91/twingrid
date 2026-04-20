@@ -13,6 +13,12 @@ public class PortfolioResponse {
     private String totalRebalanceCost;
     private List<Map<String, Object>> recommendations;
     private List<Map<String, Object>> matrix;
+    private List<Map<String, Object>> stockOverlap;
+    private Map<String, Double> sectorOverlap;
+    private Map<String, Double> marketCapOverlap;
+    private List<String> flags;
+    private List<Map<String, String>> agentTrace; // NEW: step-by-step agent reasoning
+
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -40,4 +46,20 @@ public class PortfolioResponse {
 
     public List<Map<String, Object>> getMatrix() { return matrix; }
     public void setMatrix(List<Map<String, Object>> matrix) { this.matrix = matrix; }
+
+    public List<Map<String, Object>> getStockOverlap() { return stockOverlap; }
+    public void setStockOverlap(List<Map<String, Object>> stockOverlap) { this.stockOverlap = stockOverlap; }
+
+    public Map<String, Double> getSectorOverlap() { return sectorOverlap; }
+    public void setSectorOverlap(Map<String, Double> sectorOverlap) { this.sectorOverlap = sectorOverlap; }
+
+    public Map<String, Double> getMarketCapOverlap() { return marketCapOverlap; }
+    public void setMarketCapOverlap(Map<String, Double> marketCapOverlap) { this.marketCapOverlap = marketCapOverlap; }
+
+    public List<String> getFlags() { return flags; }
+    public void setFlags(List<String> flags) { this.flags = flags; }
+
+    public List<Map<String, String>> getAgentTrace() { return agentTrace; }
+    public void setAgentTrace(List<Map<String, String>> agentTrace) { this.agentTrace = agentTrace; }
 }
+

@@ -20,4 +20,10 @@ public class PortfolioController {
     public PortfolioResponse analyzePortfolio(@RequestBody PortfolioRequest request) {
         return aiAgentService.analyzePortfolio(request);
     }
+
+    @PostMapping("/overlap-validation")
+    public java.util.Map<String, Object> validateOverlap(@RequestBody PortfolioRequest request) {
+        return aiAgentService.validateOverlap(request.getPan());
+    }
 }
+

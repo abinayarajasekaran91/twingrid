@@ -1,0 +1,283 @@
+package com.example.demo.service;
+
+import com.example.demo.entity.ClientPortfolio;
+import com.example.demo.entity.PortfolioHolding;
+import com.example.demo.repository.ClientPortfolioRepository;
+import com.example.demo.repository.PortfolioHoldingRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.*;
+
+@Service
+public class OpenAiClient {
+
+    @Value("${openai.api.key}")
+    private String apiKey;
+
+    @Value("${openai.api.url}")
+    private String apiUrl;
+
+    @Autowired
+    private ClientPortfolioRepository portfolioRepo;
+
+    @Autowired
+    private PortfolioHoldingRepository holdingRepo;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    // ─── Result wrapper: recommendations + trace ────────────────────────────────
+    public static class AgentResult {
+        public List<Map<String, Object>> recommendations;
+        public List<Map<String, String>> trace;
+        public AgentResult() {}
+        public AgentResult(List<Map<String, Object>> r, List<Map<String, String>> t) {
+            this.recommendations = r;
+            this.trace = t;
+        }
+    }
+
+    // ─── Tool Definitions for OpenAI ────────────────────────────────────────────
+    private ArrayNode buildTools() {
+        ArrayNode tools = mapper.createArrayNode();
+
+        ObjectNode t1 = mapper.createObjectNode();
+        t1.put("type", "function");
+        ObjectNode f1 = mapper.createObjectNode();
+        f1.put("name", "get_client_profile");
+        f1.put("description", "Fetch the client's risk level and current/target asset allocations from the database.");
+        ObjectNode p1 = mapper.createObjectNode();
+        p1.put("type", "object");
+        ObjectNode props1 = mapper.createObjectNode();
+        ObjectNode clientIdProp = mapper.createObjectNode();
+        clientIdProp.put("type", "string");
+        clientIdProp.put("description", "The unique client ID e.g. U1001");
+        props1.set("client_id", clientIdProp);
+        p1.set("properties", props1);
+        p1.set("required", mapper.createArrayNode().add("client_id"));
+        f1.set("parameters", p1);
+        t1.set("function", f1);
+        tools.add(t1);
+
+        ObjectNode t2 = mapper.createObjectNode();
+        t2.put("type", "function");
+        ObjectNode f2 = mapper.createObjectNode();
+        f2.put("name", "get_fund_holdings");
+        f2.put("description", "Fetch all mutual fund holdings for a given client portfolio ID from the database.");
+        ObjectNode p2 = mapper.createObjectNode();
+        p2.put("type", "object");
+        ObjectNode props2 = mapper.createObjectNode();
+        ObjectNode portfolioIdProp = mapper.createObjectNode();
+        portfolioIdProp.put("type", "string");
+        portfolioIdProp.put("description", "The internal portfolio ID returned from get_client_profile.");
+        props2.set("portfolio_id", portfolioIdProp);
+        p2.set("properties", props2);
+        p2.set("required", mapper.createArrayNode().add("portfolio_id"));
+        f2.set("parameters", p2);
+        t2.set("function", f2);
+        tools.add(t2);
+
+        return tools;
+    }
+
+    // ─── Tool Execution ─────────────────────────────────────────────────────────
+    private String executeTool(String toolName, JsonNode args) {
+        try {
+            if ("get_client_profile".equals(toolName)) {
+                String clientId = args.path("client_id").asText();
+                Optional<ClientPortfolio> opt = portfolioRepo.findByClientId(clientId);
+                if (opt.isEmpty()) return "{\"error\": \"Client not found\"}";
+                ClientPortfolio p = opt.get();
+                return String.format(
+                    "{\"portfolio_id\":\"%d\",\"client_name\":\"%s\",\"risk_level\":\"%s\",\"current_equity\":%d,\"current_debt\":%d,\"current_commodity\":%d,\"target_equity\":%d,\"target_debt\":%d,\"target_commodity\":%d}",
+                    p.getId(), p.getClientName(), p.getRiskLevel(),
+                    p.getCurrentEquity(), p.getCurrentDebt(), p.getCurrentCommodity(),
+                    p.getTargetEquity(), p.getTargetDebt(), p.getTargetCommodity()
+                );
+            } else if ("get_fund_holdings".equals(toolName)) {
+                long portfolioId = args.path("portfolio_id").asLong();
+                List<PortfolioHolding> holdings = holdingRepo.findByClientPortfolioId(portfolioId);
+                StringBuilder sb = new StringBuilder("[");
+                for (int i = 0; i < holdings.size(); i++) {
+                    PortfolioHolding h = holdings.get(i);
+                    sb.append(String.format("{\"fund\":\"%s\",\"category\":\"%s\"}",
+                        h.getFund().getName(), h.getFund().getCategory()));
+                    if (i < holdings.size() - 1) sb.append(",");
+                }
+                sb.append("]");
+                return sb.toString();
+            }
+        } catch (Exception e) {
+            return "{\"error\": \"" + e.getMessage() + "\"}";
+        }
+        return "{\"error\": \"Unknown tool\"}";
+    }
+
+    // ─── Agentic Loop ────────────────────────────────────────────────────────────
+    public AgentResult runAgentLoop(String clientId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+
+        // The trace list that gets returned to the frontend for visualization
+        List<Map<String, String>> trace = new ArrayList<>();
+        addTrace(trace, "start", "🧠 AI Agent started", "Analyzing portfolio for client: " + clientId);
+
+        String systemPrompt = """
+            You are an expert AI financial advisor agent specializing in the '5-Finger Strategy' for portfolio rebalancing in India.
+            
+            When given a client ID, you MUST use the available tools to:
+            1. First call get_client_profile to understand the client's risk level and allocation gaps.
+            2. Then call get_fund_holdings to see what mutual funds they currently hold.
+            3. Based on the data you collected, generate 2-4 specific, actionable trade recommendations.
+            
+            Return ONLY a valid JSON array of recommendations. Each object must have:
+            - "name": Stock/Fund/Asset name to trade.
+            - "reason": Short 4-6 word reason.
+            - "action": "add" or "remove".
+            - "change": Expected % change (e.g. "+7%").
+            - "current": Estimated value (e.g. "₹25,000").
+            - "color": Hex color (#10b981 for add, #ef4444 for remove).
+            """;
+
+        ArrayNode messages = mapper.createArrayNode();
+        ObjectNode sysMsg = mapper.createObjectNode();
+        sysMsg.put("role", "system");
+        sysMsg.put("content", systemPrompt);
+        messages.add(sysMsg);
+
+        ObjectNode userMsg = mapper.createObjectNode();
+        userMsg.put("role", "user");
+        userMsg.put("content", "Analyze portfolio for client ID: " + clientId);
+        messages.add(userMsg);
+
+        addTrace(trace, "llm", "📡 Calling OpenAI GPT-3.5", "Sending client context and available tools to OpenAI...");
+
+        for (int iteration = 0; iteration < 5; iteration++) {
+            ObjectNode requestBody = mapper.createObjectNode();
+            requestBody.put("model", "gpt-3.5-turbo");
+            requestBody.put("temperature", 0.6);
+            requestBody.set("tools", buildTools());
+            requestBody.put("tool_choice", iteration == 0 ? "required" : "auto");
+            requestBody.set("messages", messages);
+
+            try {
+                String requestJson = mapper.writeValueAsString(requestBody);
+                HttpEntity<String> request = new HttpEntity<>(requestJson, headers);
+                ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, request, String.class);
+
+                JsonNode root = mapper.readTree(response.getBody());
+                JsonNode choice = root.path("choices").get(0);
+                JsonNode message = choice.path("message");
+                String finishReason = choice.path("finish_reason").asText();
+
+                if ("tool_calls".equals(finishReason)) {
+                    ObjectNode assistantMsg = mapper.createObjectNode();
+                    assistantMsg.put("role", "assistant");
+                    if (!message.path("content").isNull()) {
+                        assistantMsg.put("content", message.path("content").asText(""));
+                    } else {
+                        assistantMsg.putNull("content");
+                    }
+                    assistantMsg.set("tool_calls", message.path("tool_calls"));
+                    messages.add(assistantMsg);
+
+                    JsonNode toolCalls = message.path("tool_calls");
+                    for (JsonNode toolCall : toolCalls) {
+                        String toolCallId = toolCall.path("id").asText();
+                        String toolName = toolCall.path("function").path("name").asText();
+                        JsonNode toolArgs = mapper.readTree(toolCall.path("function").path("arguments").asText());
+
+                        // ── Trace: OpenAI decided to call a tool ──────────────
+                        addTrace(trace, "tool-call",
+                            "🔧 OpenAI called tool: " + toolName,
+                            "Arguments: " + toolCall.path("function").path("arguments").asText());
+
+                        String toolResult = executeTool(toolName, toolArgs);
+
+                        // ── Trace: DB result returned to OpenAI ───────────────
+                        String label = "get_client_profile".equals(toolName) ? "🗄️ Database → client_portfolios" : "🗄️ Database → portfolio_holdings";
+                        addTrace(trace, "db-result", label, toolResult.length() > 200 ? toolResult.substring(0, 200) + "..." : toolResult);
+                        addTrace(trace, "llm", "📡 Result sent back to OpenAI", "Feeding tool result into GPT context...");
+
+                        ObjectNode toolResultMsg = mapper.createObjectNode();
+                        toolResultMsg.put("role", "tool");
+                        toolResultMsg.put("tool_call_id", toolCallId);
+                        toolResultMsg.put("name", toolName);
+                        toolResultMsg.put("content", toolResult);
+                        messages.add(toolResultMsg);
+                    }
+
+                } else if ("stop".equals(finishReason)) {
+                    String content = message.path("content").asText("[]");
+                    addTrace(trace, "reasoning", "🤔 OpenAI synthesizing recommendations", "Analyzing all tool data and applying 5-Finger Strategy rules...");
+
+                    String jsonContent = content;
+                    java.util.regex.Matcher m = java.util.regex.Pattern
+                        .compile("\\[.*?\\]", java.util.regex.Pattern.DOTALL)
+                        .matcher(content);
+                    if (m.find()) jsonContent = m.group();
+
+                    try {
+                        JsonNode recNode = mapper.readTree(jsonContent);
+                        List<Map<String, Object>> recommendations = new ArrayList<>();
+                        if (recNode.isArray()) {
+                            for (JsonNode node : recNode) {
+                                Map<String, Object> rec = new HashMap<>();
+                                rec.put("name", node.path("name").asText("Asset"));
+                                rec.put("reason", node.path("reason").asText("Strategic rebalance"));
+                                rec.put("action", node.path("action").asText("none"));
+                                rec.put("change", node.path("change").asText("0%"));
+                                rec.put("current", node.path("current").asText("₹0"));
+                                rec.put("color", node.path("color").asText("#6b7280"));
+                                recommendations.add(rec);
+                            }
+                        }
+                        if (!recommendations.isEmpty()) {
+                            addTrace(trace, "done", "✅ Agent complete", recommendations.size() + " trade recommendations generated successfully");
+                            return new AgentResult(recommendations, trace);
+                        }
+                    } catch (Exception parseEx) {
+                        addTrace(trace, "warning", "⚠️ JSON parse issue", "Retrying with explicit JSON prompt...");
+                    }
+
+                    ObjectNode retryMsg = mapper.createObjectNode();
+                    retryMsg.put("role", "user");
+                    retryMsg.put("content", "Return ONLY a JSON array of trade recommendations. No explanations. Just the JSON array.");
+                    messages.add(retryMsg);
+                    addTrace(trace, "llm", "📡 Retry: requesting strict JSON", "Asking OpenAI to return only the JSON array...");
+                }
+
+            } catch (Exception e) {
+                addTrace(trace, "error", "❌ Error in iteration " + iteration, e.getMessage());
+                break;
+            }
+        }
+
+        addTrace(trace, "error", "❌ Agent loop exhausted", "Returning fallback response");
+        return new AgentResult(
+            List.of(Map.of("name", "Agent Error", "reason", "Loop failed", "action", "none", "change", "0%", "current", "₹0", "color", "#ef4444")),
+            trace
+        );
+    }
+
+    private void addTrace(List<Map<String, String>> trace, String type, String title, String detail) {
+        Map<String, String> step = new LinkedHashMap<>();
+        step.put("type", type);
+        step.put("title", title);
+        step.put("detail", detail);
+        trace.add(step);
+        System.out.println("[AI Agent] " + title + " | " + detail);
+    }
+}
