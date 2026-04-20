@@ -17,8 +17,8 @@ public class PortfolioDaoImpl implements PortfolioDao {
     @Override
     public List<Map<String, Object>> getFundStockHoldings(String pan) {
         String sql = "SELECT " +
-                "    EMS.SchemeName as fundName, " +
-                "    HOLD.COMPNAME as stockName, " +
+                "    EMS.SchemeName AS fundName, " +
+                "    HOLD.COMPNAME AS stockName, " +
                 "    SUM(HOLD.HOLDPERCENTAGE) AS weight " +
                 "FROM ECAS_MFC_Summary EMS " +
                 "JOIN AFT_MFC_MAPPING AMM ON EMS.AMC = AMM.MFC_Amc_code AND EMS.SchemeCode = AMM.MFC_Scheme_code " +
@@ -52,5 +52,4 @@ public class PortfolioDaoImpl implements PortfolioDao {
                 "GROUP BY SchemeName";
         return jdbcTemplate.queryForList(sql, pan);
     }
-
 }
