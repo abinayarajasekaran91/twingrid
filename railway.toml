@@ -1,0 +1,13 @@
+[build]
+builder = "nixpacks"
+buildCommand = "./mvnw clean package -DskipTests -Dspring.docker.compose.enabled=false"
+
+[deploy]
+startCommand = "java -jar target/*.jar"
+healthcheckPath = "/"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[env]
+NIXPACKS_JDK_VERSION = "21"
