@@ -1,4 +1,4 @@
-let alignChart, currentChart, targetChart;
+let allocationPieChart, currentChart, targetChart;
 
 document.addEventListener('DOMContentLoaded', () => {
     initCharts();
@@ -12,15 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initCharts() {
-    // 5-Finger Strategy Alignment Chart
-    const alignCtx = document.getElementById('alignmentChart').getContext('2d');
-    alignChart = new Chart(alignCtx, {
+
+    // Current Allocation Pie Chart (by Asset Type)
+    const pieCtx = document.getElementById('allocationPieChart').getContext('2d');
+    allocationPieChart = new Chart(pieCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Equities', 'Commodities', 'Debt'],
+            labels: [],
             datasets: [{
-                data: [85, 10, 5],
-                backgroundColor: ['#8b5cf6', '#3b82f6', '#f59e0b'],
+                data: [],
+                backgroundColor: ['#8b5cf6', '#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4'],
                 borderWidth: 0,
                 cutout: '70%'
             }]
@@ -29,8 +30,7 @@ function initCharts() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false }
+                legend: { display: false }
             }
         }
     });
@@ -41,7 +41,7 @@ function initCharts() {
         type: 'doughnut',
         data: {
             datasets: [{
-                data: [86, 10, 5],
+                data: [85, 10, 5],
                 backgroundColor: ['#8b5cf6', '#3b82f6', '#f59e0b'],
                 borderWidth: 0,
                 cutout: '80%'
@@ -106,11 +106,31 @@ function updateUI(data) {
     });
 
 
+
     // Update Charts Data
-    if (data.currentAllocations) {
-        alignChart.data.datasets[0].data = data.currentAllocations;
-        alignChart.update();
+    if (data.assetTypeAllocations) {
+        const labels = data.assetTypeAllocations.map(a => a.assetType);
+        const values = data.assetTypeAllocations.map(a => a.allocationPercent);
         
+        allocationPieChart.data.labels = labels;
+        allocationPieChart.data.datasets[0].data = values;
+        allocationPieChart.update();
+
+        // Update Custom Legend
+        const pieLegend = document.getElementById('pieLegend');
+        if (pieLegend) {
+            const colors = allocationPieChart.data.datasets[0].backgroundColor;
+            pieLegend.innerHTML = data.assetTypeAllocations.map((a, i) => `
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
+                    <span style="width: 12px; height: 12px; border-radius: 50%; background: ${colors[i % colors.length]};"></span>
+                    <span style="font-weight: 600; color: var(--text-main);">${a.assetType}</span>
+                    <span style="color: var(--text-muted);">${a.allocationPercent}%</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    if (data.currentAllocations) {
         currentChart.data.datasets[0].data = data.currentAllocations;
         currentChart.update();
     }
@@ -187,10 +207,6 @@ function updateUI(data) {
         renderMatrix('matrixHeaderRow', 'matrixTableBody', data.matrix);
     }
 
-    // Update Market Cap Matrix
-    if (data.marketCapMatrix && data.marketCapMatrix.length > 0) {
-        renderMatrix('mcapMatrixHeaderRow', 'mcapMatrixTableBody', data.marketCapMatrix);
-    }
 }
 
 function renderMatrix(headerId, bodyId, matrixData) {

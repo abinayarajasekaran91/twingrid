@@ -105,38 +105,19 @@
         <div class="dashboard-grid">
             <!-- Left Column -->
             <div class="col-left">
-                <!-- 5-Finger Strategy Alignment -->
-                <div class="card strategy-card">
-                    <h3>5-Finger Strategy Alignment</h3>
-                    <div class="strategy-content">
-                        <div class="strategy-legend">
-                            <div class="legend-item active">
-                                <span class="dot purple"></span>
-                                <div>
-                                    <h4>Equities <span class="badge-outline">rebalancing</span></h4>
-                                    <div class="stat"><strong>85%</strong> <span class="target">85%</span></div>
-                                </div>
-                            </div>
-                            <div class="legend-item">
-                                <span class="dot light-blue"></span>
-                                <div>
-                                    <h4>Commodities</h4>
-                                    <div class="stat">28% <span class="target">10%</span></div>
-                                </div>
-                            </div>
-                            <div class="legend-item">
-                                <span class="dot yellow"></span>
-                                <div>
-                                    <h4>Debt</h4>
-                                    <div class="stat">5% <span class="target">5%</span></div>
-                                </div>
-                            </div>
-                            <div class="risk-level">
-                                <span class="dot grey"></span> Risk Level <span class="badge-warning">Moderate Risk</span>
+                <!-- Current Allocation Pie Chart -->
+                <div class="card allocation-pie-card">
+                    <h3>Current Portfolio Allocation (by Asset Type)</h3>
+                    <div style="display: flex; align-items: center; justify-content: center; min-height: 250px;">
+                        <div style="width: 200px; height: 200px; position: relative;">
+                            <canvas id="allocationPieChart"></canvas>
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                                <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Current</div>
+                                <div style="font-size: 1rem; color: var(--text-main); font-weight: 700;">Portfolio</div>
                             </div>
                         </div>
-                        <div class="chart-container">
-                            <canvas id="alignmentChart"></canvas>
+                        <div id="pieLegend" style="margin-left: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                            <!-- Legend items will be added here by JS -->
                         </div>
                     </div>
                 </div>
@@ -185,22 +166,6 @@
                     </div>
                 </div>
 
-                <!-- Market Cap Overlap Matrix -->
-                <div class="card matrix-card">
-                    <h3>Market Cap Overlap Matrix</h3>
-                    <div class="matrix-table-wrapper">
-                        <table class="matrix-table">
-                            <thead>
-                                <tr id="mcapMatrixHeaderRow">
-                                    <!-- Dynamic headers -->
-                                </tr>
-                            </thead>
-                            <tbody id="mcapMatrixTableBody">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
 
                 <!-- Portfolio Insights & Flags -->
                 <div class="card flags-card" id="flagsCard" style="display: none; border-left: 4px solid var(--red);">
@@ -214,14 +179,19 @@
                 <div class="card rebalance-summary">
                     <h3>Rebalancing Summary</h3>
                     <div class="summary-charts">
-                        <div class="chart-wrapper">
+                        <div class="chart-wrapper" style="position: relative; width: 120px; height: 120px;">
                             <canvas id="currentChart"></canvas>
-                            <div class="chart-label">Equities</div>
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">Equities</div>
+                            </div>
                         </div>
-                        <i data-lucide="arrow-right" class="arrow"></i>
-                        <div class="chart-wrapper">
+                        <i data-lucide="arrow-right" class="arrow" style="color: var(--text-muted);"></i>
+                        <div class="chart-wrapper" style="position: relative; width: 120px; height: 120px;">
                             <canvas id="targetChart"></canvas>
-                            <div class="chart-label">Target<br><strong>70%</strong></div>
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                                <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Target</div>
+                                <div style="font-size: 1rem; color: var(--text-main); font-weight: 700;">70%</div>
+                            </div>
                         </div>
                     </div>
                     <div class="summary-stats">
@@ -245,36 +215,6 @@
                     <button class="btn-primary full-width" onclick="alert('Execute Rebalance clicked!')">Execute Rebalance</button>
                 </div>
 
-                <!-- Current Allocations -->
-                <div class="card allocations-card">
-                    <div class="allocations-header">
-                        <h3><i data-lucide="crosshair"></i> Current Allocations</h3>
-                        <i data-lucide="chevron-up"></i>
-                    </div>
-                    <div class="allocations-list">
-                        <div class="alloc-item">
-                            <span><span class="icon purple"></span> Equities</span>
-                            <div class="alloc-values"><strong>85%</strong> <i data-lucide="arrow-right"></i> 70%</div>
-                        </div>
-                        <div class="alloc-item">
-                            <span><span class="icon blue"></span> Commodities</span>
-                            <div class="alloc-values"><strong>10%</strong> <i data-lucide="arrow-right"></i> 30%</div>
-                        </div>
-                        <div class="alloc-item">
-                            <span><span class="icon yellow"></span> Debt</span>
-                            <div class="alloc-values"><strong>5%</strong> <i data-lucide="arrow-right"></i> 20%</div>
-                        </div>
-                        <div class="alloc-item">
-                            <span><span class="icon light-blue"></span> Alternatives</span>
-                            <div class="alloc-values"><strong>5%</strong> <span>5%</span></div>
-                        </div>
-                    </div>
-                    <div class="total-cost">
-                        <span>Total Rebalance Cost</span>
-                        <strong class="negative">-₹60,59,384</strong>
-                    </div>
-                    <button class="btn-primary full-width" onclick="alert('Execute Rebalance clicked!')">Execute Rebalance</button>
-                </div>
             </div>
         </div>
     </main>

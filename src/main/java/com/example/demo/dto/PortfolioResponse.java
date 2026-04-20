@@ -23,6 +23,7 @@ public class PortfolioResponse {
     // NEW: Production-grade rebalancing metrics
     private Map<String, Object> portfolioScores; // { "before": {...}, "after": {...} }
     private List<Map<String, Object>> optimizedActions; // Detailed actions with reasoning
+    private List<Map<String, Object>> assetTypeAllocations; // For Pie Chart
     
     // Performance Metrics
     private Double currentValue;
@@ -93,5 +94,8 @@ public class PortfolioResponse {
 
     public Double getGainPercent() { return gainPercent; }
     public void setGainPercent(Double gainPercent) { this.gainPercent = gainPercent; }
+
+    public List<Map<String, Object>> getAssetTypeAllocations() { return assetTypeAllocations; }
+    public void setAssetTypeAllocations(List<Map<String, Object>> assetTypeAllocations) { this.assetTypeAllocations = assetTypeAllocations; }
 }
 

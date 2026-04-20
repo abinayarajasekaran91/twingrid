@@ -139,6 +139,10 @@ public class AIAgentService {
         response.setGain(gain);
         response.setGainPercent(gainPercent);
         
+        // Asset Type Allocations (for Pie Chart)
+        response.setAssetTypeAllocations(portfolioDao.getAssetTypeAllocations(pan));
+        
+        
         // Step 1: Normalize Data (Map<Fund, Map<Stock, Weight>>)
         Map<String, Map<String, Double>> fundHoldings = new HashMap<>();
         Map<String, Map<String, Double>> fundSectors = new HashMap<>();
@@ -224,30 +228,6 @@ public class AIAgentService {
         }
         response.setMatrix(matrix);
 
-        // Market Cap Overlap Matrix (Step 3b)
-        List<Map<String, Object>> mcapMatrix = new ArrayList<>();
-        for (int i = 0; i < fundList.size(); i++) {
-            String fundA = fundList.get(i);
-            Map<String, Object> row = new HashMap<>();
-            row.put("fund", fundA);
-            
-            List<Object> overlaps = new ArrayList<>();
-            for (int j = 0; j < fundList.size(); j++) {
-                String fundB = fundList.get(j);
-                if (i == j) {
-                    overlaps.add(100.0);
-                } else if (j > i) {
-                    overlaps.add("-");
-                } else {
-                    double score = calculateOverlap(fundMCaps.get(fundA), fundMCaps.get(fundB));
-                    overlaps.add(score > 0 ? score : "-");
-                    if (score > 80) flags.add("🚨 High Market Cap overlap: " + fundA + " & " + fundB + " (" + score + "%)");
-                }
-            }
-            row.put("overlaps", overlaps);
-            mcapMatrix.add(row);
-        }
-        response.setMarketCapMatrix(mcapMatrix);
 
         // 3. Extra Insights (Step 8: Detect Hidden Problems)
         Map<String, Integer> stockFrequency = new HashMap<>();
