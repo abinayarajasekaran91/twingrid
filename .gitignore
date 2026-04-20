@@ -1,3 +1,28 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+
+# Log files
+*.log
+
+# IDE files
+.mtj.tmp/
+*.cwk
+.project
+.classpath
+.settings/
+bin/
+.idea/
+*.iml
+*.iws
+.vscode/
+
+# MacOS files
+.DS_Store
+
+# Application secrets
+src/main/resources/application-local.properties
+
 # Compiled class files
 *.class
 

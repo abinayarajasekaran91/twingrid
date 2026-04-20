@@ -219,7 +219,7 @@ public class OpenAiClient {
                     for (JsonNode toolCall : toolCalls) {
                         String toolCallId = toolCall.path("id").asText();
                         String toolName = toolCall.path("function").path("name").asText();
-                        JsonNode toolArgs = mapper.readTree(toolCall.path("function").path("arguments").asText());
+                        JsonNode toolArgs = mapper.readTree(toolCall.path("id").path("arguments").asText());
 
                         // ── Trace: OpenAI decided to call a tool ──────────────
                         addTrace(trace, "tool-call",
@@ -301,5 +301,76 @@ public class OpenAiClient {
         step.put("detail", detail);
         trace.add(step);
         System.out.println("[AI Agent] " + title + " | " + detail);
+    }
+
+    public Map<String, String> generateAudioInsights(String summary, String language) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+
+        System.out.println("[OpenAiClient] Requested Language for AI Insights: " + language);
+
+        String systemInstruction = String.format(
+            "You are a professional financial advisor. You MUST generate your response strictly in %s language using the native script. " +
+            "Use a natural, spoken tone suitable for a 1-on-1 advisor briefing. " +
+            "Do not use English words. Translate all technical terms like 'overlap' and 'rebalancing' into natural-sounding %s terms.",
+            language, language
+        );
+
+        String userPrompt = String.format(
+            "Translate and expand this analysis into a natural spoken briefing in %s script:\n\n" +
+            "Analysis Data: '%s'\n\n" +
+            "Please generate 3 detailed versions:\n" +
+            "1. quick: A 2-minute natural summary.\n" +
+            "2. detailed: A 10-minute masterclass explanation.\n" +
+            "3. advisor: A 15-minute senior advisor briefing.\n\n" +
+            "Return ONLY a valid JSON object with keys 'quick', 'detailed', and 'advisor'.",
+            language, summary
+        );
+
+        ArrayNode messages = mapper.createArrayNode();
+        ObjectNode sysMsg = mapper.createObjectNode();
+        sysMsg.put("role", "system");
+        sysMsg.put("content", systemInstruction);
+        messages.add(sysMsg);
+
+        ObjectNode msg = mapper.createObjectNode();
+        msg.put("role", "user");
+        msg.put("content", userPrompt);
+        messages.add(msg);
+
+        ObjectNode requestBody = mapper.createObjectNode();
+        requestBody.put("model", "gpt-3.5-turbo");
+        requestBody.put("temperature", 0.7);
+        requestBody.set("messages", messages);
+
+        try {
+            HttpEntity<String> request = new HttpEntity<>(mapper.writeValueAsString(requestBody), headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, request, String.class);
+            JsonNode root = mapper.readTree(response.getBody());
+            String content = root.path("choices").get(0).path("message").path("content").asText();
+            
+            // Extract JSON from response
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\{.*\\}", java.util.regex.Pattern.DOTALL).matcher(content);
+            if (m.find()) {
+                JsonNode result = mapper.readTree(m.group());
+                Map<String, String> insights = new HashMap<>();
+                insights.put("quick", result.path("quick").asText());
+                insights.put("detailed", result.path("detailed").asText());
+                insights.put("advisor", result.path("advisor").asText());
+                return insights;
+            }
+        } catch (Exception e) {
+            System.err.println("Error generating AI insights: " + e.getMessage());
+        }
+
+        Map<String, String> fallback = new HashMap<>();
+        String intro = language.equals("Tamil") ? "வணக்கம். உங்கள் போர்ட்ஃபோலியோ பகுப்பாய்வு இதோ. " : 
+                       (language.equals("Hindi") ? "नमस्ते. यहाँ आपके पोर्टफोलियो का विश्लेषण है. " : "Hello. Here is your portfolio analysis. ");
+        
+        fallback.put("quick", intro + "The analysis is complete. " + summary);
+        fallback.put("detailed", intro + "We have performed a deep-dive analysis. " + summary + " Please review the rebalancing plan to optimize your diversification.");
+        fallback.put("advisor", intro + "Welcome to your senior advisor briefing. " + summary + " Our 5-Finger strategy suggests these trades to align with your " + language + " preferences and risk profile.");
+        return fallback;
     }
 }
