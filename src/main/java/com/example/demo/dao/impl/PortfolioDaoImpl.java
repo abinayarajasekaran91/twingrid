@@ -17,9 +17,9 @@ public class PortfolioDaoImpl implements PortfolioDao {
     @Override
     public List<Map<String, Object>> getFundStockHoldings(String pan) {
         String sql = "SELECT " +
-                     "    EMS.SchemeName as fundName, " +
-                     "    HOLD.COMPNAME as stockName, " +
-                     "    HOLD.HOLDPERCENTAGE as weight " +
+                     "    EMS.SchemeName AS fundName, " +
+                     "    HOLD.COMPNAME AS stockName, " +
+                     "    SUM(HOLD.HOLDPERCENTAGE) AS weight " +
                      "FROM ECAS_MFC_Summary EMS " +
                      "JOIN AFT_MFC_MAPPING AMM ON EMS.AMC = AMM.MFC_Amc_code AND EMS.SchemeCode = AMM.MFC_Scheme_code " +
                      "JOIN AFT_SCHEME_RT_CODE ASRC ON AMM.RTA_Scheme_code = ASRC.RT_SCHEME_CODE " +
@@ -28,10 +28,8 @@ public class PortfolioDaoImpl implements PortfolioDao {
                      "JOIN AFT_MF_PORTFOLIO HOLD ON ASD.PRIMARY_FD_CODE = HOLD.SCHEMECODE " +
                      "WHERE EMS.MarketValue > 0 " +
                      "AND EMS.ECAS_ReferenceId IN (SELECT ECAS_ReferenceId FROM ECAS_MFC_Investordetails WHERE PAN = ?) " +
-                     "AND HOLD.INVENDDATE = (SELECT MAX(H2.INVENDDATE) FROM AFT_MF_PORTFOLIO H2 WHERE H2.SCHEMECODE = HOLD.SCHEMECODE)";
-
-
-
+                     "AND HOLD.INVENDDATE = (SELECT MAX(H2.INVENDDATE) FROM AFT_MF_PORTFOLIO H2 WHERE H2.SCHEMECODE = HOLD.SCHEMECODE) " +
+                     "GROUP BY EMS.SchemeName, HOLD.COMPNAME";
         
         return jdbcTemplate.queryForList(sql, pan);
     }
@@ -39,12 +37,17 @@ public class PortfolioDaoImpl implements PortfolioDao {
     @Override
     public List<Map<String, Object>> getClientFunds(String pan) {
         String sql = "SELECT " +
-                     "    SchemeName as fundName, " +
-                     "    MarketValue as marketValue, " +
-                     "    (MarketValue / SUM(MarketValue) OVER()) * 100 as fundWeight " +
+                     "    SchemeName AS fundName, " +
+                     "    SUM(MarketValue) AS marketValue, " +
+                     "    (SUM(MarketValue) * 100.0 / SUM(SUM(MarketValue)) OVER()) AS fundWeight " +
                      "FROM ECAS_MFC_Summary " +
                      "WHERE MarketValue > 0 " +
-                     "AND ECAS_ReferenceId IN (SELECT ECAS_ReferenceId FROM ECAS_MFC_Investordetails WHERE PAN = ?)";
+                     "AND ECAS_ReferenceId IN (" +
+                     "    SELECT ECAS_ReferenceId " +
+                     "    FROM ECAS_MFC_Investordetails " +
+                     "    WHERE PAN = ?" +
+                     ") " +
+                     "GROUP BY SchemeName";
         return jdbcTemplate.queryForList(sql, pan);
     }
 }
