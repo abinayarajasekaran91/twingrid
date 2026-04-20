@@ -4,12 +4,11 @@ import com.example.demo.dto.PortfolioRequest;
 import com.example.demo.dto.PortfolioResponse;
 import com.example.demo.entity.ClientPortfolio;
 import com.example.demo.entity.PortfolioHolding;
+import com.example.demo.entity.StockHolding;
 import com.example.demo.repository.ClientPortfolioRepository;
 import com.example.demo.repository.PortfolioHoldingRepository;
 import com.example.demo.repository.StockHoldingRepository;
-import com.example.demo.entity.StockHolding;
 import com.example.demo.dao.PortfolioDao;
-
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,9 +19,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AIAgentService {
+
+    // Store analysis status for real-time progress tracking
+    private static final ConcurrentHashMap<String, Map<String, Object>> analysisStatus = new ConcurrentHashMap<>();
 
     @Autowired
     private ClientPortfolioRepository portfolioRepo;
@@ -36,32 +39,39 @@ public class AIAgentService {
     @Autowired
     private PortfolioDao portfolioDao;
 
-
+    @Autowired
+    private OpenAiClient openAiClient;
 
     public PortfolioResponse analyzePortfolio(PortfolioRequest request) {
         PortfolioResponse response = new PortfolioResponse();
 
         String clientId = request.getClientId() != null ? request.getClientId() : "U1001";
 
+        // Initialize status
+        updateStatus(clientId, "starting", 0, "Initializing analysis...");
+
         // ── STEP 1: Ask OpenAI Agent to drive the analysis ──────────────────────
-        // OpenAI will call get_client_profile and get_fund_holdings tools automatically.
+        // OpenAI will call get_client_profile and get_fund_holdings tools
+        // automatically.
         // This returns final recommendations after OpenAI has queried the DB via tools.
-        // System.out.println("[AI Agent] Starting agentic loop for client: " + clientId);
+        // System.out.println("[AI Agent] Starting agentic loop for client: " +
+        // clientId);
         // OpenAiClient.AgentResult agentResult = openAiClient.runAgentLoop(clientId);
 
         // MOCK RESULT (To save tokens as requested)
         OpenAiClient.AgentResult agentResult = new OpenAiClient.AgentResult();
         agentResult.recommendations = new ArrayList<>();
-        
+
         Map<String, Object> rec1 = new HashMap<>();
         rec1.put("name", "Reliance Industries");
-        rec1.put("reason", "Overlap penalty of 42% with Fund B detected; reducing concentration to improve diversification.");
+        rec1.put("reason",
+                "Overlap penalty of 42% with Fund B detected; reducing concentration to improve diversification.");
         rec1.put("action", "REDUCE");
         rec1.put("change", "-12.0%");
         rec1.put("current", "₹1,47,25,452");
         rec1.put("color", "#ef4444");
         agentResult.recommendations.add(rec1);
-        
+
         Map<String, Object> rec2 = new HashMap<>();
         rec2.put("name", "SBI Bluechip Fund");
         rec2.put("reason", "Strategic increase to fill Small Cap gap and optimize portfolio redundancy score.");
@@ -87,7 +97,8 @@ public class AIAgentService {
         Map<String, String> step3 = new HashMap<>();
         step3.put("type", "reasoning");
         step3.put("title", "🤔 Running Optimization Loop");
-        step3.put("detail", "Iteratively adjusting weights to minimize total cost. Diversification score improved from 58 to 84.");
+        step3.put("detail",
+                "Iteratively adjusting weights to minimize total cost. Diversification score improved from 58 to 84.");
         agentResult.trace.add(step3);
 
         Map<String, String> step4 = new HashMap<>();
@@ -96,12 +107,13 @@ public class AIAgentService {
         step4.put("detail", "Final weights minimize redundancy and maximize strategic alignment.");
         agentResult.trace.add(step4);
 
-
         // ── STEP 2: Fetch portfolio data for the dashboard display (fast DB read) ─
+        updateStatus(clientId, "analyzing", 2, "Fetching portfolio holdings...");
         Optional<ClientPortfolio> optionalPortfolio = portfolioRepo.findByClientId(clientId);
         if (optionalPortfolio.isEmpty()) {
             response.setStatus("ERROR");
             response.setMessage("Portfolio not found for client ID: " + clientId);
+            updateStatus(clientId, "error", 0, "Portfolio not found");
             return response;
         }
 
@@ -119,26 +131,28 @@ public class AIAgentService {
         // ── STEP 3: Advanced Overlap Matrix Calculation (Logic from User) ────────
         // Use real MSSQL data if PAN is provided, else fallback to mock/seeded data
         String pan = request.getPan() != null ? request.getPan() : "DZZPA6521D";
-        
+
         List<Map<String, Object>> rawHoldings = portfolioDao.getFundStockHoldings(pan);
         List<Map<String, Object>> clientFunds = portfolioDao.getClientFunds(pan);
-        
+
         // Performance Metrics
         Map<String, Object> perf = portfolioDao.getPortfolioPerformance(pan);
-        double currentValue = perf.get("currentValue") != null ? ((Number) perf.get("currentValue")).doubleValue() : 0.0;
-        double investedAmount = perf.get("investedAmount") != null ? ((Number) perf.get("investedAmount")).doubleValue() : 0.0;
-        
+        double currentValue = perf.get("currentValue") != null ? ((Number) perf.get("currentValue")).doubleValue()
+                : 0.0;
+        double investedAmount = perf.get("investedAmount") != null ? ((Number) perf.get("investedAmount")).doubleValue()
+                : 0.0;
+
         double gain = currentValue - investedAmount;
         double gainPercent = 0.0;
         if (gain != 0 && investedAmount != 0) {
             gainPercent = (gain / investedAmount) * 100;
         }
-        
+
         response.setCurrentValue(currentValue);
         response.setInvestedAmount(investedAmount);
         response.setGain(gain);
         response.setGainPercent(gainPercent);
-        
+
         // Step 1: Normalize Data (Map<Fund, Map<Stock, Weight>>)
         Map<String, Map<String, Double>> fundHoldings = new HashMap<>();
         Map<String, Map<String, Double>> fundSectors = new HashMap<>();
@@ -150,9 +164,9 @@ public class AIAgentService {
             String sector = (String) row.get("sector");
             String mcap = (String) row.get("marketCap");
             double weight = ((Number) row.get("weight")).doubleValue();
-            
+
             fundHoldings.computeIfAbsent(fund, k -> new HashMap<>()).put(stock, weight);
-            
+
             if (sector != null) {
                 Map<String, Double> sMap = fundSectors.computeIfAbsent(fund, k -> new HashMap<>());
                 sMap.put(sector, sMap.getOrDefault(sector, 0.0) + weight);
@@ -182,8 +196,8 @@ public class AIAgentService {
             String fundA = fundList.get(i);
             Map<String, Object> row = new HashMap<>();
             row.put("fund", fundA);
-            row.put("iconColor", "#3b82f6"); 
-            
+            row.put("iconColor", "#3b82f6");
+
             List<Object> overlaps = new ArrayList<>();
             for (int j = 0; j < fundList.size(); j++) {
                 String fundB = fundList.get(j);
@@ -193,18 +207,18 @@ public class AIAgentService {
                     overlaps.add("-");
                 } else {
                     double score = calculateOverlap(fundHoldings.get(fundA), fundHoldings.get(fundB));
-                    
+
                     // Step 4: Portfolio-Level Overlap (Trick: score * min(weightA, weightB))
                     double weightA = fundPortfolioWeights.getOrDefault(fundA, 0.0);
                     double weightB = fundPortfolioWeights.getOrDefault(fundB, 0.0);
                     double adjustedOverlap = score * Math.min(weightA, weightB);
-                    
+
                     if (score > 0) {
                         overlaps.add(score);
                     } else {
                         overlaps.add("-");
                     }
-                    
+
                     if (score > 35) {
                         flags.add("🚨 Almost same funds: " + fundA + " & " + fundB + " (" + score + "%)");
                     } else if (score >= 20) {
@@ -212,9 +226,10 @@ public class AIAgentService {
                     } else if (score >= 10) {
                         flags.add("🟡 Acceptable overlap: " + fundA + " & " + fundB + " (" + score + "%)");
                     }
-                    
+
                     if (adjustedOverlap > 5) {
-                        flags.add("🚨 Portfolio concentration risk: " + adjustedOverlap + "% of total portfolio is duplicated between " + fundA + " & " + fundB);
+                        flags.add("🚨 Portfolio concentration risk: " + adjustedOverlap
+                                + "% of total portfolio is duplicated between " + fundA + " & " + fundB);
                     }
                 }
             }
@@ -230,7 +245,7 @@ public class AIAgentService {
             String fundA = fundList.get(i);
             Map<String, Object> row = new HashMap<>();
             row.put("fund", fundA);
-            
+
             List<Object> overlaps = new ArrayList<>();
             for (int j = 0; j < fundList.size(); j++) {
                 String fundB = fundList.get(j);
@@ -241,7 +256,8 @@ public class AIAgentService {
                 } else {
                     double score = calculateOverlap(fundMCaps.get(fundA), fundMCaps.get(fundB));
                     overlaps.add(score > 0 ? score : "-");
-                    if (score > 80) flags.add("🚨 High Market Cap overlap: " + fundA + " & " + fundB + " (" + score + "%)");
+                    if (score > 80)
+                        flags.add("🚨 High Market Cap overlap: " + fundA + " & " + fundB + " (" + score + "%)");
                 }
             }
             row.put("overlaps", overlaps);
@@ -252,16 +268,17 @@ public class AIAgentService {
         // 3. Extra Insights (Step 8: Detect Hidden Problems)
         Map<String, Integer> stockFrequency = new HashMap<>();
         Map<String, Double> totalExposure = new HashMap<>();
-        
+
         for (String fund : fundHoldings.keySet()) {
             double fw = fundPortfolioWeights.getOrDefault(fund, 1.0 / fundHoldings.size());
             Map<String, Double> stocks = fundHoldings.get(fund);
             for (Map.Entry<String, Double> entry : stocks.entrySet()) {
                 stockFrequency.put(entry.getKey(), stockFrequency.getOrDefault(entry.getKey(), 0) + 1);
-                totalExposure.put(entry.getKey(), totalExposure.getOrDefault(entry.getKey(), 0.0) + (entry.getValue() * fw));
+                totalExposure.put(entry.getKey(),
+                        totalExposure.getOrDefault(entry.getKey(), 0.0) + (entry.getValue() * fw));
             }
         }
-        
+
         List<Map<String, Object>> stockOverlaps = new ArrayList<>();
         for (String stock : stockFrequency.keySet()) {
             if (stockFrequency.get(stock) > 1) {
@@ -270,19 +287,25 @@ public class AIAgentService {
                 so.put("fundCount", stockFrequency.get(stock));
                 so.put("exposure", Math.round(totalExposure.get(stock) * 100.0) / 100.0);
                 stockOverlaps.add(so);
-                
-                if (stockFrequency.get(stock) > 3) flags.add("🚨 Stock concentration risk: " + stock + " in " + stockFrequency.get(stock) + " funds");
-                if (totalExposure.get(stock) > 8.0) flags.add("🚨 Overexposed to " + stock + " (" + so.get("exposure") + "%)");
+
+                if (stockFrequency.get(stock) > 3)
+                    flags.add("🚨 Stock concentration risk: " + stock + " in " + stockFrequency.get(stock) + " funds");
+                if (totalExposure.get(stock) > 8.0)
+                    flags.add("🚨 Overexposed to " + stock + " (" + so.get("exposure") + "%)");
             }
         }
-        
+
         // Aggregate Sectors & MCaps
         Map<String, Double> sectorMetrics = new HashMap<>();
         Map<String, Double> mcapMetrics = new HashMap<>();
         for (String fund : fundHoldings.keySet()) {
             double fw = fundPortfolioWeights.getOrDefault(fund, 1.0 / fundHoldings.size());
-            if (fundSectors.containsKey(fund)) fundSectors.get(fund).forEach((k, v) -> sectorMetrics.put(k, Math.round((sectorMetrics.getOrDefault(k, 0.0) + (v * fw)) * 100.0) / 100.0));
-            if (fundMCaps.containsKey(fund)) fundMCaps.get(fund).forEach((k, v) -> mcapMetrics.put(k, Math.round((mcapMetrics.getOrDefault(k, 0.0) + (v * fw)) * 100.0) / 100.0));
+            if (fundSectors.containsKey(fund))
+                fundSectors.get(fund).forEach((k, v) -> sectorMetrics.put(k,
+                        Math.round((sectorMetrics.getOrDefault(k, 0.0) + (v * fw)) * 100.0) / 100.0));
+            if (fundMCaps.containsKey(fund))
+                fundMCaps.get(fund).forEach((k, v) -> mcapMetrics.put(k,
+                        Math.round((mcapMetrics.getOrDefault(k, 0.0) + (v * fw)) * 100.0) / 100.0));
         }
 
         response.setStockOverlap(stockOverlaps);
@@ -301,8 +324,9 @@ public class AIAgentService {
         double beforeDiversification = calculateDiversificationScore(beforeOverlapScore, totalExposure);
 
         // 2. Run Iterative Optimization
-        Map<String, Double> optimizedWeights = optimizePortfolio(fundList, fundHoldings, fundPortfolioWeights, portfolio);
-        
+        Map<String, Double> optimizedWeights = optimizePortfolio(fundList, fundHoldings, fundPortfolioWeights,
+                portfolio);
+
         // 3. Calculate "After" Scores
         // Recalculate exposures for "After" state
         Map<String, Double> afterTotalExposure = new HashMap<>();
@@ -310,15 +334,18 @@ public class AIAgentService {
             double fw = optimizedWeights.getOrDefault(fund, 0.0);
             Map<String, Double> stocks = fundHoldings.get(fund);
             for (Map.Entry<String, Double> entry : stocks.entrySet()) {
-                afterTotalExposure.put(entry.getKey(), afterTotalExposure.getOrDefault(entry.getKey(), 0.0) + (entry.getValue() * fw));
+                afterTotalExposure.put(entry.getKey(),
+                        afterTotalExposure.getOrDefault(entry.getKey(), 0.0) + (entry.getValue() * fw));
             }
         }
         double afterOverlapScore = calculateTotalOverlapScore(fundList, fundHoldings, optimizedWeights);
         double afterDiversification = calculateDiversificationScore(afterOverlapScore, afterTotalExposure);
 
         Map<String, Object> scores = new HashMap<>();
-        scores.put("before", Map.of("overlapScore", Math.round(beforeOverlapScore), "diversificationScore", Math.round(beforeDiversification)));
-        scores.put("after", Map.of("overlapScore", Math.round(afterOverlapScore), "diversificationScore", Math.round(afterDiversification)));
+        scores.put("before", Map.of("overlapScore", Math.round(beforeOverlapScore), "diversificationScore",
+                Math.round(beforeDiversification)));
+        scores.put("after", Map.of("overlapScore", Math.round(afterOverlapScore), "diversificationScore",
+                Math.round(afterDiversification)));
         response.setPortfolioScores(scores);
 
         // 4. Generate Optimized Actions
@@ -332,16 +359,19 @@ public class AIAgentService {
                 action.put("action", to > from ? "INCREASE" : "REDUCE");
                 action.put("from", from);
                 action.put("to", to);
-                
+
                 // Reason generation
                 double redundancy = 0.0;
                 for (String other : fundList) {
-                    if (!fund.equals(other)) redundancy += calculateOverlap(fundHoldings.get(fund), fundHoldings.get(other));
+                    if (!fund.equals(other))
+                        redundancy += calculateOverlap(fundHoldings.get(fund), fundHoldings.get(other));
                 }
                 if (to < from) {
-                    action.put("reason", "High redundancy score (" + Math.round(redundancy) + "%) and concentration in overlapping holdings.");
+                    action.put("reason", "High redundancy score (" + Math.round(redundancy)
+                            + "%) and concentration in overlapping holdings.");
                 } else {
-                    action.put("reason", "Low overlap and improves strategy alignment with " + portfolio.getRiskLevel() + " profile.");
+                    action.put("reason", "Low overlap and improves strategy alignment with " + portfolio.getRiskLevel()
+                            + " profile.");
                 }
                 actions.add(action);
             }
@@ -352,10 +382,24 @@ public class AIAgentService {
         response.setAgentTrace(agentResult.trace);
         System.out.println("[AI Agent] Analysis complete. Recommendations: " + agentResult.recommendations.size());
 
+        // Mark as complete
+        updateStatus(clientId, "complete", 5, "Analysis complete");
+
+        // Clear status after a delay (frontend should have picked it up)
+        new Thread(() -> {
+            try {
+                Thread.sleep(5000);
+                clearStatus(clientId);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
+
         return response;
     }
 
-    private double calculateTotalOverlapScore(List<String> funds, Map<String, Map<String, Double>> holdings, Map<String, Double> weights) {
+    private double calculateTotalOverlapScore(List<String> funds, Map<String, Map<String, Double>> holdings,
+            Map<String, Double> weights) {
         double totalPenalty = 0.0;
         for (int i = 0; i < funds.size(); i++) {
             for (int j = i + 1; j < funds.size(); j++) {
@@ -371,20 +415,23 @@ public class AIAgentService {
     private double calculateConcentrationPenalty(Map<String, Double> exposures) {
         double penalty = 0.0;
         for (double exp : exposures.values()) {
-            if (exp > 8.0) penalty += Math.pow(exp - 8.0, 2);
+            if (exp > 8.0)
+                penalty += Math.pow(exp - 8.0, 2);
         }
         return penalty;
     }
 
     private double calculateDiversificationScore(double overlapPenalty, Map<String, Double> exposures) {
         double maxExp = 0.0;
-        for (double exp : exposures.values()) maxExp = Math.max(maxExp, exp);
+        for (double exp : exposures.values())
+            maxExp = Math.max(maxExp, exp);
         return Math.max(0, 100 - (overlapPenalty * 2) - (maxExp > 10 ? (maxExp - 10) * 3 : 0));
     }
 
-    private Map<String, Double> optimizePortfolio(List<String> funds, Map<String, Map<String, Double>> holdings, Map<String, Double> currentWeights, ClientPortfolio portfolio) {
+    private Map<String, Double> optimizePortfolio(List<String> funds, Map<String, Map<String, Double>> holdings,
+            Map<String, Double> currentWeights, ClientPortfolio portfolio) {
         Map<String, Double> weights = new HashMap<>(currentWeights);
-        
+
         // Iterative optimization (Simplified Greedy)
         for (int iter = 0; iter < 10; iter++) {
             // 1. Calculate Redundancy for each fund
@@ -392,7 +439,8 @@ public class AIAgentService {
             for (String fA : funds) {
                 double r = 0.0;
                 for (String fB : funds) {
-                    if (!fA.equals(fB)) r += calculateOverlap(holdings.get(fA), holdings.get(fB)) * weights.getOrDefault(fB, 0.0);
+                    if (!fA.equals(fB))
+                        r += calculateOverlap(holdings.get(fA), holdings.get(fB)) * weights.getOrDefault(fB, 0.0);
                 }
                 redundancy.put(fA, r);
             }
@@ -409,18 +457,22 @@ public class AIAgentService {
 
             // 3. Redistribute to low redundancy funds
             List<String> lowRedundancyFunds = new ArrayList<>();
-            for (String f : funds) if (redundancy.get(f) < 5.0) lowRedundancyFunds.add(f);
-            
+            for (String f : funds)
+                if (redundancy.get(f) < 5.0)
+                    lowRedundancyFunds.add(f);
+
             if (!lowRedundancyFunds.isEmpty()) {
                 double share = totalReduced / lowRedundancyFunds.size();
-                for (String f : lowRedundancyFunds) weights.put(f, weights.get(f) + share);
+                for (String f : lowRedundancyFunds)
+                    weights.put(f, weights.get(f) + share);
             } else {
                 // If no low redundancy funds, redistribute equally to all
                 double share = totalReduced / funds.size();
-                for (String f : funds) weights.put(f, weights.get(f) + share);
+                for (String f : funds)
+                    weights.put(f, weights.get(f) + share);
             }
         }
-        
+
         // Ensure constraints: min 0, max 40%, sum to 1
         double sum = 0.0;
         for (String f : funds) {
@@ -428,7 +480,8 @@ public class AIAgentService {
             weights.put(f, w);
             sum += w;
         }
-        for (String f : funds) weights.put(f, weights.get(f) / sum);
+        for (String f : funds)
+            weights.put(f, weights.get(f) / sum);
 
         return weights;
     }
@@ -438,13 +491,14 @@ public class AIAgentService {
      * Uses 1 USD = ₹84 exchange rate.
      */
     private String convertToRupees(String dollarStr) {
-        if (dollarStr == null) return "₹0";
+        if (dollarStr == null)
+            return "₹0";
         try {
             boolean negative = dollarStr.contains("-");
             boolean positive = dollarStr.contains("+");
             // Strip sign, $ and commas, then parse
             String cleaned = dollarStr.replace("-", "").replace("+", "")
-                                      .replace("$", "").replace(",", "").trim();
+                    .replace("$", "").replace(",", "").trim();
             double usdValue = Double.parseDouble(cleaned);
             double inrValue = usdValue * 84.0;
 
@@ -460,9 +514,11 @@ public class AIAgentService {
     }
 
     private String formatIndianNumber(long n) {
-        if (n == 0) return "0";
+        if (n == 0)
+            return "0";
         String s = Long.toString(n);
-        if (s.length() <= 3) return s;
+        if (s.length() <= 3)
+            return s;
         // Last 3 digits, then groups of 2
         StringBuilder result = new StringBuilder();
         result.insert(0, s.substring(s.length() - 3));
@@ -471,12 +527,14 @@ public class AIAgentService {
             result.insert(0, "," + s.substring(s.length() - 2));
             s = s.substring(0, s.length() - 2);
         }
-        if (!s.isEmpty()) result.insert(0, s + ",");
+        if (!s.isEmpty())
+            result.insert(0, s + ",");
         return result.toString();
     }
 
     private double calculateOverlap(Map<String, Double> fundA, Map<String, Double> fundB) {
-        if (fundA == null || fundB == null) return 0.0;
+        if (fundA == null || fundB == null)
+            return 0.0;
         double overlap = 0.0;
         for (String stock : fundA.keySet()) {
             if (fundB.containsKey(stock)) {
@@ -489,7 +547,7 @@ public class AIAgentService {
     public Map<String, Object> validateOverlap(String pan) {
         List<Map<String, Object>> rawHoldings = portfolioDao.getFundStockHoldings(pan);
         List<Map<String, Object>> clientFunds = portfolioDao.getClientFunds(pan);
-        
+
         Map<String, Map<String, Double>> fundHoldings = new HashMap<>();
         for (Map<String, Object> row : rawHoldings) {
             String fund = (String) row.get("fundName");
@@ -502,7 +560,7 @@ public class AIAgentService {
         result.put("pan", pan);
         result.put("totalFunds", fundHoldings.size());
         result.put("holdingsStructure", fundHoldings);
-        
+
         List<Map<String, Object>> pairs = new ArrayList<>();
         List<String> funds = new ArrayList<>(fundHoldings.keySet());
         for (int i = 0; i < funds.size(); i++) {
@@ -520,5 +578,32 @@ public class AIAgentService {
         result.put("overlapPairs", pairs);
         return result;
     }
-}
 
+    // Get analysis status for real-time progress
+    public Map<String, Object> getAnalysisStatus(String clientId) {
+        Map<String, Object> status = analysisStatus.get(clientId);
+        if (status == null) {
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("status", "not_started");
+            empty.put("step", 0);
+            return empty;
+        }
+        return new HashMap<>(status);
+    }
+
+    // Update analysis status
+    private void updateStatus(String clientId, String status, int step, String message) {
+        Map<String, Object> statusMap = new HashMap<>();
+        statusMap.put("status", status);
+        statusMap.put("step", step);
+        statusMap.put("message", message);
+        statusMap.put("timestamp", System.currentTimeMillis());
+        analysisStatus.put(clientId, statusMap);
+        System.out.println("[Status Update] Client: " + clientId + " | Step: " + step + " | " + message);
+    }
+
+    // Clear analysis status
+    private void clearStatus(String clientId) {
+        analysisStatus.remove(clientId);
+    }
+}
