@@ -88,18 +88,23 @@ function updateUI(data) {
     
     // Update Total Cost everywhere
     document.querySelectorAll('.total-cost .negative').forEach(el => {
-        el.textContent = data.totalRebalanceCost;
-        if(data.totalRebalanceCost && data.totalRebalanceCost.includes('+')) {
-            el.className = 'negative positive text-green'; // making it green for positive
-            el.style.color = 'var(--green)';
-        } else if (data.totalRebalanceCost === '$0.00') {
+        let val = data.totalRebalanceCost;
+        if (val === '₹0.00' || val === '$0.00' || val === '0' || val === '0.00') {
+            el.textContent = '-';
             el.className = 'negative';
             el.style.color = 'var(--text-muted)';
         } else {
-            el.className = 'negative text-red';
-            el.style.color = 'var(--red)';
+            el.textContent = val;
+            if(val && val.includes('+')) {
+                el.className = 'negative positive text-green';
+                el.style.color = 'var(--green)';
+            } else {
+                el.className = 'negative text-red';
+                el.style.color = 'var(--red)';
+            }
         }
     });
+
 
     // Update Charts Data
     if (data.currentAllocations) {
@@ -114,72 +119,119 @@ function updateUI(data) {
         targetChart.update();
     }
 
-    // Update Cart
-    if (data.recommendations) {
-        const cartBody = document.getElementById('cartTableBody');
-        cartBody.innerHTML = data.recommendations.map(item => `
-            <tr>
-                <td class="stock-cell">
-                    <div class="stock-icon" style="background-color: ${item.color}">${item.name.charAt(0)}</div>
-                    <div class="stock-info">
-                        <strong>${item.name}</strong>
-                        <span>0% <span class="${item.change.startsWith('+') ? 'positive text-green' : 'text-red'}">${item.change}</span></span>
-                    </div>
-                </td>
-                <td class="reason-cell">${item.reason}</td>
-                <td class="current-cell">${item.current}</td>
-                <td>
-                    <button class="btn-outline ${item.action === 'remove' ? 'remove' : ''}" ${item.action === 'none' ? 'disabled' : ''} onclick="toggleCartItem(this, '${item.action}')">
-                        <i data-lucide="${item.action === 'remove' ? 'minus' : (item.action === 'none' ? 'check' : 'plus')}"></i> 
-                        <span>${item.action === 'remove' ? 'Remove Cart' : (item.action === 'none' ? 'No Action' : 'Add to Cart')}</span>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
+
+    // Update Flags (NEW)
+    if (data.flags && data.flags.length > 0) {
+        const flagsCard = document.getElementById('flagsCard');
+        const flagsList = document.getElementById('flagsList');
+        if (flagsCard && flagsList) {
+            flagsCard.style.display = 'block';
+            flagsList.innerHTML = data.flags.map(f => `<div>${f}</div>`).join('');
+        }
     }
+
+    // Update Portfolio Scores (NEW)
+    if (data.portfolioScores) {
+        const scoresEl = document.getElementById('portfolioScores');
+        if (scoresEl) {
+            scoresEl.style.display = 'flex';
+            document.getElementById('beforeOverlap').textContent = data.portfolioScores.before.overlapScore + '%';
+            document.getElementById('afterOverlap').textContent = data.portfolioScores.after.overlapScore + '%';
+            document.getElementById('beforeDiversification').textContent = data.portfolioScores.before.diversificationScore;
+            document.getElementById('afterDiversification').textContent = data.portfolioScores.after.diversificationScore;
+        }
+    }
+
+    // Update Optimized Actions (NEW)
+    if (data.optimizedActions && data.optimizedActions.length > 0) {
+        const optCard = document.getElementById('optimizationPlanCard');
+        const optList = document.getElementById('optimizationActions');
+        if (optCard && optList) {
+            optCard.style.display = 'block';
+            optList.innerHTML = data.optimizedActions.map(action => `
+                <div class="opt-action-item">
+                    <div class="opt-action-header">
+                        <span class="opt-fund-name">${action.fund}</span>
+                        <span class="badge-${action.action === 'INCREASE' ? 'green' : 'red'}">${action.action}</span>
+                        <span class="opt-change-text">${action.from}% <i data-lucide="arrow-right" style="width:12px;"></i> ${action.to}%</span>
+                    </div>
+                    <div class="opt-action-reason">${action.reason}</div>
+                </div>
+            `).join('');
+        }
+    }
+
+    // Update Performance Metrics (NEW)
+    if (data.currentValue !== undefined) {
+        const perfEl = document.getElementById('performanceMetrics');
+        if (perfEl) {
+            perfEl.style.display = 'flex';
+            document.getElementById('investedAmount').textContent = formatCurrency(data.investedAmount);
+            document.getElementById('currentValue').textContent = formatCurrency(data.currentValue);
+            document.getElementById('gainVal').textContent = formatCurrency(data.gain);
+            
+            const gpEl = document.getElementById('gainPercent');
+            gpEl.textContent = (data.gainPercent >= 0 ? '+' : '') + data.gainPercent.toFixed(2) + '%';
+            gpEl.className = 'perf-badge ' + (data.gainPercent >= 0 ? 'positive' : 'negative');
+        }
+    }
+
+    // Update Agent Trace
+    if (data.agentTrace) {
+        renderAgentTrace(data.agentTrace);
+    }
+
 
     // Update Matrix
     if (data.matrix && data.matrix.length > 0) {
-        const getBgStyle = (val) => {
-            if (val === 100) return 'background-color: #2563eb; color: white; font-weight: bold;'; // Dark blue for 100%
-            if (val === 0) return 'background-color: white; color: transparent;'; // Hide upper triangle
-            if (val >= 60) return 'background-color: #3b82f6; color: white;';
-            if (val >= 40) return 'background-color: #60a5fa; color: white;';
-            if (val >= 20) return 'background-color: #93c5fd; color: #1e3a8a;';
-            if (val >= 10) return 'background-color: #bfdbfe; color: #1e3a8a;';
-            return 'background-color: #dbeafe; color: #1e3a8a;'; // Very light blue
-        };
-
-        const headerRow = document.getElementById('matrixHeaderRow');
-        const matrixBody = document.getElementById('matrixTableBody');
-        
-        // 1. Build Headers: Sr, Investment Name, 1, 2, 3...
-        let headerHtml = `<th>Sr</th><th>Investment Name</th>`;
-        for (let i = 1; i <= data.matrix.length; i++) {
-            headerHtml += `<th style="text-align: center; width: 40px;">${i}</th>`;
-        }
-        headerRow.innerHTML = headerHtml;
-
-        // 2. Build Body
-        matrixBody.innerHTML = data.matrix.map((row, i) => `
-            <tr>
-                <td style="color: var(--text-muted); font-size: 0.8rem;">${i + 1}</td>
-                <td style="min-width: 250px;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div class="icon-wrapper" style="background-color: ${row.iconColor}; width: 24px; height: 24px;">
-                            <i data-lucide="activity" style="width: 12px; height: 12px;"></i>
-                        </div>
-                        <span style="font-size: 0.85rem;">${row.fund}</span>
-                    </div>
-                </td>
-                ${row.overlaps.map((val, j) => `
-                    <td style="text-align: center; padding: 0.5rem; border: 1px solid #f1f5f9; font-size: 0.8rem; ${getBgStyle(val)}">
-                        ${val > 0 ? val : ''}
-                    </td>
-                `).join('')}
-            </tr>
-        `).join('');
+        renderMatrix('matrixHeaderRow', 'matrixTableBody', data.matrix);
     }
+
+    // Update Market Cap Matrix
+    if (data.marketCapMatrix && data.marketCapMatrix.length > 0) {
+        renderMatrix('mcapMatrixHeaderRow', 'mcapMatrixTableBody', data.marketCapMatrix);
+    }
+}
+
+function renderMatrix(headerId, bodyId, matrixData) {
+    const getBgStyle = (val) => {
+        if (val === 100) return 'background-color: #1e3a8a; color: white; font-weight: bold;'; 
+        if (val === 0 || val === '-') return 'background-color: white; color: #94a3b8;'; 
+        if (val > 35) return 'background-color: #ef4444; color: white;'; // Red 🚨
+        if (val >= 20) return 'background-color: #f97316; color: white;'; // Orange ⚠️
+        if (val >= 10) return 'background-color: #f59e0b; color: white;'; // Yellow 🟡
+        return 'background-color: #10b981; color: white;'; // Green 🟢
+    };
+
+    const headerRow = document.getElementById(headerId);
+    const matrixBody = document.getElementById(bodyId);
+    
+    if (!headerRow || !matrixBody) return;
+
+    let headerHtml = `<th>Sr</th><th>Investment Name</th>`;
+    for (let i = 1; i <= matrixData.length; i++) {
+        headerHtml += `<th style="text-align: center; width: 40px;">${i}</th>`;
+    }
+    headerRow.innerHTML = headerHtml;
+
+    matrixBody.innerHTML = matrixData.map((row, i) => `
+        <tr>
+            <td style="color: var(--text-muted); font-size: 0.8rem;">${i + 1}</td>
+            <td style="min-width: 250px;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="icon-wrapper" style="background-color: ${row.iconColor || '#3b82f6'}; width: 24px; height: 24px;">
+                        <i data-lucide="activity" style="width: 12px; height: 12px;"></i>
+                    </div>
+                    <span style="font-size: 0.85rem;">${row.fund}</span>
+                </div>
+            </td>
+            ${row.overlaps.map((val, j) => `
+                <td style="text-align: center; padding: 0.5rem; border: 1px solid #f1f5f9; font-size: 0.8rem; ${getBgStyle(val)}">
+                    ${val}
+                </td>
+            `).join('')}
+        </tr>
+    `).join('');
 
 
     // Re-initialize lucide icons for dynamic elements
@@ -274,4 +326,12 @@ function toggleCartItem(btn, action) {
     if (window.lucide) {
         lucide.createIcons();
     }
+}
+
+function formatCurrency(val) {
+    return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+    }).format(val);
 }

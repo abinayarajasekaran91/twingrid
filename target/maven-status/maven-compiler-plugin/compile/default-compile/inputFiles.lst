@@ -9,6 +9,7 @@
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dao/UserDao.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dao/impl/PortfolioDaoImpl.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dao/impl/UserDaoImpl.java
+/Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dto/ChatRequest.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dto/ErrorResponse.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dto/LoginRequest.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dto/LoginResponse.java
