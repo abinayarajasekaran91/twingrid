@@ -46,17 +46,27 @@
                 <p>Build a tool that takes a client portfolio, analyses overlap across holdings, maps it to the 5-finger framework, identifies gaps/over-concentration, and generates a cart with rebalancing recommendations with reasoning.</p>
             </div>
             <div class="banner-action">
-                <div class="client-selector">
-                    <i data-lucide="search"></i>
-                    <select id="clientSelect">
-                        <option value="U1001">U1001 - John Smith</option>
-                        <option value="U1002">U1002 - Emma Davis</option>
-                        <option value="U1003">U1003 - Michael Chen</option>
-                        <option value="U1004">U1004 - Sophia Patel</option>
-                        <option value="U1005">U1005 - Liam Wilson</option>
-                    </select>
+                <div class="client-selector" style="display: flex; gap: 0.5rem; background: white; padding: 0.25rem 0.5rem; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; border-right: 1px solid #eee; padding-right: 0.5rem;">
+                        <i data-lucide="search" style="color: #94a3b8; width: 16px;"></i>
+                        <select id="clientSelect" style="border: none; outline: none; font-size: 0.9rem; color: #1e293b; background: transparent;">
+                            <option value="U1001">U1001 - John Smith</option>
+                            <option value="U1002">U1002 - Emma Davis</option>
+                            <option value="U1003">U1003 - Michael Chen</option>
+                            <option value="U1004">U1004 - Sophia Patel</option>
+                            <option value="U1005">U1005 - Liam Wilson</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; padding-left: 0.25rem;">
+                        <i data-lucide="languages" style="color: #94a3b8; width: 16px;"></i>
+                        <select id="languageSelectTop" style="border: none; outline: none; font-size: 0.9rem; color: #1e293b; background: transparent;">
+                            <option value="English">English</option>
+                            <option value="Tamil">Tamil</option>
+                            <option value="Hindi">Hindi</option>
+                        </select>
+                    </div>
                 </div>
-                <button id="analyzeBtn" class="btn-primary">Analyze Portfolio</button>
+                <button id="analyzeBtn" class="btn-primary" onclick="window.analyzePortfolio()">Analyze Portfolio</button>
             </div>
         </section>
 
@@ -119,6 +129,32 @@
                         <div id="pieLegend" style="margin-left: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
                             <!-- Legend items will be added here by JS -->
                         </div>
+                    </div>
+                </div>
+
+                <!-- AI Audio Insights -->
+                <div class="card ai-audio-card" id="aiAudioCard" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0;"><i data-lucide="mic" style="color: var(--purple);"></i> AI Audio Insights</h3>
+                    </div>
+                    <div class="audio-modes">
+                        <div class="audio-mode-item">
+                            <button onclick="playAudio('quick')" class="btn-audio"><i data-lucide="play-circle"></i> Quick</button>
+                            <span class="mode-desc">2 min • Critical action</span>
+                        </div>
+                        <div class="audio-mode-item">
+                            <button onclick="playAudio('detailed')" class="btn-audio"><i data-lucide="play-circle"></i> Detailed</button>
+                            <span class="mode-desc">10 min • Explanation</span>
+                        </div>
+                        <div class="audio-mode-item">
+                            <button onclick="playAudio('advisor')" class="btn-audio"><i data-lucide="play-circle"></i> Advisor</button>
+                            <span class="mode-desc">15 min • Full strategy</span>
+                        </div>
+                    </div>
+                    <div class="audio-controls" style="margin-top: 1rem; border-top: 1px solid #f1f5f9; padding-top: 1rem; display: flex; justify-content: center;">
+                        <button onclick="stopAudio()" class="btn-audio btn-stop" style="background: #fee2e2; color: #ef4444; border: 1px solid #fecaca;">
+                            <i data-lucide="square"></i> Stop Briefing
+                        </button>
                     </div>
                 </div>
 

@@ -36,6 +36,9 @@ public class AIAgentService {
     @Autowired
     private PortfolioDao portfolioDao;
 
+    @Autowired
+    private OpenAiClient openAiClient;
+
 
 
     public PortfolioResponse analyzePortfolio(PortfolioRequest request) {
@@ -44,58 +47,8 @@ public class AIAgentService {
         String clientId = request.getClientId() != null ? request.getClientId() : "U1001";
 
         // ── STEP 1: Ask OpenAI Agent to drive the analysis ──────────────────────
-        // OpenAI will call get_client_profile and get_fund_holdings tools automatically.
-        // This returns final recommendations after OpenAI has queried the DB via tools.
-        // System.out.println("[AI Agent] Starting agentic loop for client: " + clientId);
-        // OpenAiClient.AgentResult agentResult = openAiClient.runAgentLoop(clientId);
-
-        // MOCK RESULT (To save tokens as requested)
-        OpenAiClient.AgentResult agentResult = new OpenAiClient.AgentResult();
-        agentResult.recommendations = new ArrayList<>();
-        
-        Map<String, Object> rec1 = new HashMap<>();
-        rec1.put("name", "Reliance Industries");
-        rec1.put("reason", "Overlap penalty of 42% with Fund B detected; reducing concentration to improve diversification.");
-        rec1.put("action", "REDUCE");
-        rec1.put("change", "-12.0%");
-        rec1.put("current", "₹1,47,25,452");
-        rec1.put("color", "#ef4444");
-        agentResult.recommendations.add(rec1);
-        
-        Map<String, Object> rec2 = new HashMap<>();
-        rec2.put("name", "SBI Bluechip Fund");
-        rec2.put("reason", "Strategic increase to fill Small Cap gap and optimize portfolio redundancy score.");
-        rec2.put("action", "INCREASE");
-        rec2.put("change", "+15.5%");
-        rec2.put("current", "₹12,00,000");
-        rec2.put("color", "#10b981");
-        agentResult.recommendations.add(rec2);
-
-        agentResult.trace = new ArrayList<>();
-        Map<String, String> step1 = new HashMap<>();
-        step1.put("type", "start");
-        step1.put("title", "🧠 AI Agent started (Simulation)");
-        step1.put("detail", "Analyzing portfolio for client: " + clientId);
-        agentResult.trace.add(step1);
-
-        Map<String, String> step2 = new HashMap<>();
-        step2.put("type", "tool-call");
-        step2.put("title", "🔧 Tool: calculate_penalties");
-        step2.put("detail", "Analyzing Overlap Penalty, Concentration (threshold 8%), and Strategy Deviation.");
-        agentResult.trace.add(step2);
-
-        Map<String, String> step3 = new HashMap<>();
-        step3.put("type", "reasoning");
-        step3.put("title", "🤔 Running Optimization Loop");
-        step3.put("detail", "Iteratively adjusting weights to minimize total cost. Diversification score improved from 58 to 84.");
-        agentResult.trace.add(step3);
-
-        Map<String, String> step4 = new HashMap<>();
-        step4.put("type", "done");
-        step4.put("title", "✅ Rebalancing Optimized");
-        step4.put("detail", "Final weights minimize redundancy and maximize strategic alignment.");
-        agentResult.trace.add(step4);
-
+        System.out.println("[AI Agent] Starting agentic loop for client: " + clientId);
+        OpenAiClient.AgentResult agentResult = openAiClient.runAgentLoop(clientId);
 
         // ── STEP 2: Fetch portfolio data for the dashboard display (fast DB read) ─
         Optional<ClientPortfolio> optionalPortfolio = portfolioRepo.findByClientId(clientId);
@@ -297,8 +250,8 @@ public class AIAgentService {
         double afterDiversification = calculateDiversificationScore(afterOverlapScore, afterTotalExposure);
 
         Map<String, Object> scores = new HashMap<>();
-        scores.put("before", Map.of("overlapScore", Math.round(beforeOverlapScore), "diversificationScore", Math.round(beforeDiversification)));
-        scores.put("after", Map.of("overlapScore", Math.round(afterOverlapScore), "diversificationScore", Math.round(afterDiversification)));
+        scores.put("before", Map.of("overlap", Math.round(beforeOverlapScore), "diversification", Math.round(beforeDiversification)));
+        scores.put("after", Map.of("overlap", Math.round(afterOverlapScore), "diversification", Math.round(afterDiversification)));
         response.setPortfolioScores(scores);
 
         // 4. Generate Optimized Actions
@@ -308,10 +261,9 @@ public class AIAgentService {
             double to = Math.round(optimizedWeights.getOrDefault(fund, 0.0) * 1000.0) / 10.0;
             if (Math.abs(from - to) > 0.1) {
                 Map<String, Object> action = new HashMap<>();
-                action.put("fund", fund);
-                action.put("action", to > from ? "INCREASE" : "REDUCE");
-                action.put("from", from);
-                action.put("to", to);
+                action.put("name", fund);
+                action.put("action", to > from ? "increase" : "reduce"); 
+                action.put("change", String.format("%+.1f%%", to - from));
                 
                 // Reason generation
                 double redundancy = 0.0;
@@ -330,6 +282,24 @@ public class AIAgentService {
 
         response.setRecommendations(agentResult.recommendations);
         response.setAgentTrace(agentResult.trace);
+
+        // ── STEP 6: Generate AI Audio Insights (with full context) ────────────────
+        String lang = request.getLanguage() != null ? request.getLanguage() : "English";
+        StringBuilder detailedSummary = new StringBuilder();
+        detailedSummary.append("Client Risk Level: ").append(portfolio.getRiskLevel()).append(". ");
+        detailedSummary.append("Overlap Score improved from ").append(Map.class.cast(response.getPortfolioScores().get("before")).get("overlap"))
+                       .append("% to ").append(Map.class.cast(response.getPortfolioScores().get("after")).get("overlap")).append("%. ");
+        detailedSummary.append("Diversification Score improved from ").append(Map.class.cast(response.getPortfolioScores().get("before")).get("diversification"))
+                       .append(" to ").append(Map.class.cast(response.getPortfolioScores().get("after")).get("diversification")).append(". ");
+        detailedSummary.append("Top Recommendations: ");
+        for (int i = 0; i < Math.min(3, actions.size()); i++) {
+            detailedSummary.append(actions.get(i).get("name")).append(" (").append(actions.get(i).get("action")).append("), ");
+        }
+        detailedSummary.append(". Strategy alignment is focus of rebalancing.");
+
+        System.out.println("[AI Insights] Generating insights in language: " + lang);
+        response.setAiInsights(openAiClient.generateAudioInsights(detailedSummary.toString(), lang));
+
         System.out.println("[AI Agent] Analysis complete. Recommendations: " + agentResult.recommendations.size());
 
         return response;
