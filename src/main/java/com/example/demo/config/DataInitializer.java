@@ -31,6 +31,13 @@ public class DataInitializer {
         return args -> {
             // Check if data already exists
             if (fundRepo.count() > 0) {
+                // Ensure Abinaya is set for U1001 even if data already exists
+                portfolioRepo.findByClientId("U1001").ifPresent(p -> {
+                    if ("John Smith".equals(p.getClientName())) {
+                        p.setClientName("Abinaya");
+                        portfolioRepo.save(p);
+                    }
+                });
                 return;
             }
 
@@ -49,7 +56,7 @@ public class DataInitializer {
             fundRepo.saveAll(Arrays.asList(f1, f2, f3, f4, f5, f6, f7, f8, f9, f10));
 
             // 2. Seed Client Portfolios
-            ClientPortfolio p1 = createPortfolio("U1001", "John Smith", "Moderate Risk", 85, 10, 5, 70, 30, 0, "-₹60,59,384");
+            ClientPortfolio p1 = createPortfolio("U1001", "Abinaya", "Moderate Risk", 85, 10, 5, 70, 30, 0, "-₹60,59,384");
             ClientPortfolio p2 = createPortfolio("U1002", "Emma Davis", "High Risk", 40, 20, 40, 60, 20, 20, "-₹12,95,280");
             ClientPortfolio p3 = createPortfolio("U1003", "Michael Chen", "Low Risk", 20, 0, 80, 40, 10, 50, "+₹3,78,042");
             ClientPortfolio p4 = createPortfolio("U1004", "Sophia Patel", "Aggressive", 95, 5, 0, 80, 15, 5, "-₹94,08,000");
