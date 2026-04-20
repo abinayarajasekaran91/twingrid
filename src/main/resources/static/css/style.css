@@ -681,3 +681,34 @@ th {
     border-radius: var(--radius-md);
     border-left: 3px solid #ef4444;
 }
+
+/* ── Performance Metrics ───────────────────────────────────────────── */
+.performance-metrics {
+    display: flex;
+}
+.perf-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.perf-label {
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.perf-val {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+.perf-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    margin-left: 0.25rem;
+}
+.perf-badge.positive { background: var(--green-bg); color: var(--green); }
+.perf-badge.negative { background: #fee2e2; color: var(--red); }

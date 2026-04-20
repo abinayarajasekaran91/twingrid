@@ -23,6 +23,12 @@ public class PortfolioResponse {
     // NEW: Production-grade rebalancing metrics
     private Map<String, Object> portfolioScores; // { "before": {...}, "after": {...} }
     private List<Map<String, Object>> optimizedActions; // Detailed actions with reasoning
+    
+    // Performance Metrics
+    private Double currentValue;
+    private Double investedAmount;
+    private Double gain;
+    private Double gainPercent;
 
 
     public String getStatus() { return status; }
@@ -75,5 +81,17 @@ public class PortfolioResponse {
 
     public List<Map<String, Object>> getOptimizedActions() { return optimizedActions; }
     public void setOptimizedActions(List<Map<String, Object>> optimizedActions) { this.optimizedActions = optimizedActions; }
+
+    public Double getCurrentValue() { return currentValue; }
+    public void setCurrentValue(Double currentValue) { this.currentValue = currentValue; }
+
+    public Double getInvestedAmount() { return investedAmount; }
+    public void setInvestedAmount(Double investedAmount) { this.investedAmount = investedAmount; }
+
+    public Double getGain() { return gain; }
+    public void setGain(Double gain) { this.gain = gain; }
+
+    public Double getGainPercent() { return gainPercent; }
+    public void setGainPercent(Double gainPercent) { this.gainPercent = gainPercent; }
 }
 

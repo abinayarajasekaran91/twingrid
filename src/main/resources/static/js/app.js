@@ -161,6 +161,21 @@ function updateUI(data) {
         }
     }
 
+    // Update Performance Metrics (NEW)
+    if (data.currentValue !== undefined) {
+        const perfEl = document.getElementById('performanceMetrics');
+        if (perfEl) {
+            perfEl.style.display = 'flex';
+            document.getElementById('investedAmount').textContent = formatCurrency(data.investedAmount);
+            document.getElementById('currentValue').textContent = formatCurrency(data.currentValue);
+            document.getElementById('gainVal').textContent = formatCurrency(data.gain);
+            
+            const gpEl = document.getElementById('gainPercent');
+            gpEl.textContent = (data.gainPercent >= 0 ? '+' : '') + data.gainPercent.toFixed(2) + '%';
+            gpEl.className = 'perf-badge ' + (data.gainPercent >= 0 ? 'positive' : 'negative');
+        }
+    }
+
     // Update Agent Trace
     if (data.agentTrace) {
         renderAgentTrace(data.agentTrace);
@@ -311,4 +326,12 @@ function toggleCartItem(btn, action) {
     if (window.lucide) {
         lucide.createIcons();
     }
+}
+
+function formatCurrency(val) {
+    return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+    }).format(val);
 }
