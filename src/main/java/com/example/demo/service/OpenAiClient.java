@@ -2,8 +2,10 @@ package com.example.demo.service;
 
 import com.example.demo.entity.ClientPortfolio;
 import com.example.demo.entity.PortfolioHolding;
+import com.example.demo.entity.StockHolding;
 import com.example.demo.repository.ClientPortfolioRepository;
 import com.example.demo.repository.PortfolioHoldingRepository;
+import com.example.demo.repository.StockHoldingRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -33,6 +35,9 @@ public class OpenAiClient {
 
     @Autowired
     private PortfolioHoldingRepository holdingRepo;
+
+    @Autowired
+    private StockHoldingRepository stockRepo;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper mapper = new ObjectMapper();
@@ -111,8 +116,18 @@ public class OpenAiClient {
                 StringBuilder sb = new StringBuilder("[");
                 for (int i = 0; i < holdings.size(); i++) {
                     PortfolioHolding h = holdings.get(i);
-                    sb.append(String.format("{\"fund\":\"%s\",\"category\":\"%s\"}",
-                        h.getFund().getName(), h.getFund().getCategory()));
+                    
+                    // Fetch Market Cap distribution for the fund
+                    List<StockHolding> stocks = stockRepo.findByFundId(h.getFund().getId());
+                    Map<String, Double> mcap = new HashMap<>();
+                    for (StockHolding s : stocks) {
+                        if (s.getMarketCap() != null) {
+                            mcap.put(s.getMarketCap(), mcap.getOrDefault(s.getMarketCap(), 0.0) + s.getWeight());
+                        }
+                    }
+
+                    sb.append(String.format("{\"fund\":\"%s\",\"category\":\"%s\",\"marketCap\":%s}",
+                        h.getFund().getName(), h.getFund().getCategory(), mapper.writeValueAsString(mcap)));
                     if (i < holdings.size() - 1) sb.append(",");
                 }
                 sb.append("]");
@@ -135,16 +150,23 @@ public class OpenAiClient {
         addTrace(trace, "start", "🧠 AI Agent started", "Analyzing portfolio for client: " + clientId);
 
         String systemPrompt = """
-            You are an expert AI financial advisor agent specializing in the '5-Finger Strategy' for portfolio rebalancing in India.
+            You are an expert AI financial advisor agent specializing in production-grade portfolio rebalancing using an optimization cost function.
             
-            When given a client ID, you MUST use the available tools to:
-            1. First call get_client_profile to understand the client's risk level and allocation gaps.
-            2. Then call get_fund_holdings to see what mutual funds they currently hold.
-            3. Based on the data you collected, generate 2-4 specific, actionable trade recommendations.
+            When analyzing a portfolio, you MUST consider:
+            1. Overlap Penalty: Calculated as overlap(i,j) × min(weight_i, weight_j). High overlap between large allocations is a critical risk.
+            2. Concentration Penalty: Any individual stock exposure > 8% is a "red flag".
+            3. Strategy Deviation: Current vs Target allocation gaps in the 5-Finger Strategy (Equity, Debt, Commodities).
+            
+            Your goal is to find new weights that minimize "Total Cost" while enforcing:
+            - Sum of weights = 100%
+            - Max weight per fund <= 40%
+            - Minimum weight threshold to avoid tiny allocations.
+            
+            When given data, explain your reasoning using these metrics. For example: "Reducing Fund A because its 42% overlap with Fund B creates excessive redundancy."
             
             Return ONLY a valid JSON array of recommendations. Each object must have:
             - "name": Stock/Fund/Asset name to trade.
-            - "reason": Short 4-6 word reason.
+            - "reason": Detailed reasoning (10-15 words) mentioning overlap, concentration, or diversification scores.
             - "action": "add" or "remove".
             - "change": Expected % change (e.g. "+7%").
             - "current": Estimated value (e.g. "₹25,000").

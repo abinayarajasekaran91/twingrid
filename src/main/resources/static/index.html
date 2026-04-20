@@ -68,6 +68,20 @@
                 <span>John Smith</span>
                 <span class="badge-purple">Needs Action <i data-lucide="heart"></i></span>
             </div>
+            <div id="portfolioScores" class="portfolio-scores-summary" style="display: none; margin-left: auto; gap: 2rem; align-items: center;">
+                <div class="score-item">
+                    <span class="score-label">Overlap Score:</span>
+                    <span id="beforeOverlap" class="score-val before">42%</span>
+                    <i data-lucide="arrow-right" class="arrow-small"></i>
+                    <span id="afterOverlap" class="score-val after">18%</span>
+                </div>
+                <div class="score-item">
+                    <span class="score-label">Diversification:</span>
+                    <span id="beforeDiversification" class="score-val before">58</span>
+                    <i data-lucide="arrow-right" class="arrow-small"></i>
+                    <span id="afterDiversification" class="score-val after">84</span>
+                </div>
+            </div>
         </section>
 
         <div class="dashboard-grid">
@@ -115,30 +129,30 @@
                     <p>We've generated a list of trades to rebalance <strong>John Smith's</strong> portfolio to better align with the 5-finger strategy. The cart is ready for review.</p>
                 </div>
 
-                <!-- Rebalance Cart -->
-                <div class="card cart-card">
-                    <h3>Rebalance Cart</h3>
-                    <table class="cart-table">
-                        <thead>
-                            <tr>
-                                <th>Stock</th>
-                                <th>Reason</th>
-                                <th>Current</th>
-                                <th>Target</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cartTableBody">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
+                <!-- Optimized Rebalancing Plan (NEW) -->
+                <div class="card optimization-card" id="optimizationPlanCard" style="display: none;">
+                    <h3><i data-lucide="zap" style="color: #f59e0b;"></i> AI Optimized Rebalancing Plan</h3>
+                    <p class="card-subtitle">Found weights that minimize Total Cost (Overlap + Concentration + Strategy Gaps)</p>
+                    <div id="optimizationActions" class="optimization-actions-list">
+                        <!-- Populated by JS -->
+                    </div>
                 </div>
+
             </div>
 
             <!-- Right Column -->
             <div class="col-right">
                 <!-- Matrix -->
                 <div class="card matrix-card">
-                    <h3>Portfolio Overlap Matrix</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="margin: 0;">Portfolio Overlap Matrix (Stock Level)</h3>
+                        <div class="matrix-legend">
+                            <span class="legend-chip red">>35%</span>
+                            <span class="legend-chip orange">20-35%</span>
+                            <span class="legend-chip yellow">10-20%</span>
+                            <span class="legend-chip green"><10%</span>
+                        </div>
+                    </div>
                     <div class="matrix-table-wrapper">
                         <table class="matrix-table">
                             <thead>
@@ -150,6 +164,31 @@
                                 <!-- Populated by JS -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Market Cap Overlap Matrix -->
+                <div class="card matrix-card">
+                    <h3>Market Cap Overlap Matrix</h3>
+                    <div class="matrix-table-wrapper">
+                        <table class="matrix-table">
+                            <thead>
+                                <tr id="mcapMatrixHeaderRow">
+                                    <!-- Dynamic headers -->
+                                </tr>
+                            </thead>
+                            <tbody id="mcapMatrixTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Portfolio Insights & Flags -->
+                <div class="card flags-card" id="flagsCard" style="display: none; border-left: 4px solid var(--red);">
+                    <h3><i data-lucide="alert-triangle" style="color: var(--red);"></i> Critical Insights & Risk Flags</h3>
+                    <div id="flagsList" class="flags-list">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
 

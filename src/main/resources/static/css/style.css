@@ -561,3 +561,123 @@ th {
     overflow-y: auto;
 }
 
+
+/* ── Portfolio Scores Summary ───────────────────────────────────────── */
+.portfolio-scores-summary {
+    background: #f8fafc;
+    padding: 0.5rem 1.25rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+}
+.score-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.score-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+.score-val {
+    font-size: 1rem;
+    font-weight: 700;
+}
+.score-val.before { color: var(--text-muted); text-decoration: line-through; opacity: 0.7; }
+.score-val.after { color: var(--green); font-size: 1.1rem; }
+.arrow-small { width: 14px; height: 14px; color: var(--text-muted); opacity: 0.5; }
+
+/* ── Optimization Card ─────────────────────────────────────────────── */
+.optimization-card {
+    border-left: 4px solid #f59e0b;
+    background: linear-gradient(to right, #fffdfa, #ffffff);
+}
+.card-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: -0.5rem;
+    margin-bottom: 1.5rem;
+}
+.optimization-actions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.opt-action-item {
+    padding: 1rem;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.opt-action-item:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-md);
+}
+.opt-action-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+.opt-fund-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    flex: 1;
+}
+.opt-change-text {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.opt-action-reason {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    padding-left: 0.5rem;
+    border-left: 2px solid #e5e7eb;
+}
+
+.badge-green { background: #d1fae5; color: #065f46; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+.badge-red { background: #fee2e2; color: #991b1b; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+
+/* ── Overlap Legend ───────────────────────────────────────────────── */
+.matrix-legend {
+    display: flex;
+    gap: 0.5rem;
+}
+.legend-chip {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    color: white;
+}
+.legend-chip.red { background: #ef4444; }
+.legend-chip.orange { background: #f97316; }
+.legend-chip.yellow { background: #f59e0b; }
+.legend-chip.green { background: #10b981; }
+
+/* ── Flags Card ───────────────────────────────────────────────────── */
+.flags-card {
+    background: #fffafa;
+}
+.flags-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.flags-list div {
+    font-size: 0.85rem;
+    color: #991b1b;
+    padding: 0.5rem;
+    background: #fee2e2;
+    border-radius: var(--radius-md);
+    border-left: 3px solid #ef4444;
+}

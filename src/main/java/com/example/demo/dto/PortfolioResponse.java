@@ -16,8 +16,13 @@ public class PortfolioResponse {
     private List<Map<String, Object>> stockOverlap;
     private Map<String, Double> sectorOverlap;
     private Map<String, Double> marketCapOverlap;
+    private List<Map<String, Object>> marketCapMatrix;
     private List<String> flags;
-    private List<Map<String, String>> agentTrace; // NEW: step-by-step agent reasoning
+    private List<Map<String, String>> agentTrace; 
+    
+    // NEW: Production-grade rebalancing metrics
+    private Map<String, Object> portfolioScores; // { "before": {...}, "after": {...} }
+    private List<Map<String, Object>> optimizedActions; // Detailed actions with reasoning
 
 
     public String getStatus() { return status; }
@@ -59,7 +64,16 @@ public class PortfolioResponse {
     public List<String> getFlags() { return flags; }
     public void setFlags(List<String> flags) { this.flags = flags; }
 
+    public List<Map<String, Object>> getMarketCapMatrix() { return marketCapMatrix; }
+    public void setMarketCapMatrix(List<Map<String, Object>> marketCapMatrix) { this.marketCapMatrix = marketCapMatrix; }
+
     public List<Map<String, String>> getAgentTrace() { return agentTrace; }
     public void setAgentTrace(List<Map<String, String>> agentTrace) { this.agentTrace = agentTrace; }
+
+    public Map<String, Object> getPortfolioScores() { return portfolioScores; }
+    public void setPortfolioScores(Map<String, Object> portfolioScores) { this.portfolioScores = portfolioScores; }
+
+    public List<Map<String, Object>> getOptimizedActions() { return optimizedActions; }
+    public void setOptimizedActions(List<Map<String, Object>> optimizedActions) { this.optimizedActions = optimizedActions; }
 }
 
