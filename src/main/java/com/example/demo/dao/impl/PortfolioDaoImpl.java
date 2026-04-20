@@ -52,4 +52,17 @@ public class PortfolioDaoImpl implements PortfolioDao {
                 "GROUP BY SchemeName";
         return jdbcTemplate.queryForList(sql, pan);
     }
+
+    @Override
+    public Map<String, Object> getPortfolioPerformance(String pan) {
+        String sql = "select SUM(ems.MarketValue) as currentValue, SUM(ems.CostValue) as investedAmount " +
+                     "from ECAS_MFC_InvestorDetails emid " +
+                     "JOIN ECAS_MFC_Summary ems on emid.ECAS_ReferenceId = ems.ECAS_ReferenceId " +
+                     "where PAN = ?";
+        try {
+            return jdbcTemplate.queryForMap(sql, pan);
+        } catch (Exception e) {
+            return Map.of("currentValue", 0.0, "investedAmount", 0.0);
+        }
+    }
 }

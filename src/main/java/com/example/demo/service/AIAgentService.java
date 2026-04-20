@@ -123,6 +123,22 @@ public class AIAgentService {
         List<Map<String, Object>> rawHoldings = portfolioDao.getFundStockHoldings(pan);
         List<Map<String, Object>> clientFunds = portfolioDao.getClientFunds(pan);
         
+        // Performance Metrics
+        Map<String, Object> perf = portfolioDao.getPortfolioPerformance(pan);
+        double currentValue = perf.get("currentValue") != null ? ((Number) perf.get("currentValue")).doubleValue() : 0.0;
+        double investedAmount = perf.get("investedAmount") != null ? ((Number) perf.get("investedAmount")).doubleValue() : 0.0;
+        
+        double gain = currentValue - investedAmount;
+        double gainPercent = 0.0;
+        if (gain != 0 && investedAmount != 0) {
+            gainPercent = (gain / investedAmount) * 100;
+        }
+        
+        response.setCurrentValue(currentValue);
+        response.setInvestedAmount(investedAmount);
+        response.setGain(gain);
+        response.setGainPercent(gainPercent);
+        
         // Step 1: Normalize Data (Map<Fund, Map<Stock, Weight>>)
         Map<String, Map<String, Double>> fundHoldings = new HashMap<>();
         Map<String, Map<String, Double>> fundSectors = new HashMap<>();
