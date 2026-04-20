@@ -5,4 +5,7 @@ import java.util.Optional;
 
 public interface UserDao {
     Optional<User> findByEmail(String email);
+    Optional<User> findProfileByEmail(String email);
+    Optional<User> findByPan(String pan);
 }
+

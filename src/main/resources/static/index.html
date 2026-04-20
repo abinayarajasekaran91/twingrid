@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5-Finger Strategy Portfolio Analysis & Rebalancing Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Chart.js for donut charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-left">
+            <div class="logo">
+                <i data-lucide="grid" style="color: #3b82f6;"></i>
+                <span>Fin-grid</span>
+            </div>
+            <a href="#" class="nav-item"><i data-lucide="folder"></i> Plan</a>
+            <a href="#" class="nav-item active"><i data-lucide="refresh-cw"></i> Rebalance</a>
+            <a href="#" class="nav-item"><i data-lucide="pie-chart"></i> Insights</a>
+        </div>
+        <div class="nav-center">
+            <div class="search-bar">
+                <i data-lucide="search"></i>
+                <input type="text" placeholder="Client Applied">
+            </div>
+        </div>
+        <div class="nav-right">
+            <i data-lucide="bell"></i>
+            <div class="profile">
+                <img src="https://ui-avatars.com/api/?name=JS&background=random" alt="Profile">
+                <i data-lucide="chevron-down" class="chevron"></i>
+            </div>
+        </div>
+    </nav>
+
+    <main class="dashboard">
+        <!-- Header Banner -->
+        <section class="banner-card">
+            <div class="banner-content">
+                <h1>5-Finger Strategy Portfolio Analysis & Rebalancing Tool</h1>
+                <p>Advisors manually review client portfolios for fund overlap, concentration risk, and alignment with the 5-finger strategy. This is slow and inconsistent across advisors.</p>
+                <p>Build a tool that takes a client portfolio, analyses overlap across holdings, maps it to the 5-finger framework, identifies gaps/over-concentration, and generates a cart with rebalancing recommendations with reasoning.</p>
+            </div>
+            <div class="banner-action">
+                <div class="client-selector">
+                    <i data-lucide="search"></i>
+                    <select id="clientSelect">
+                        <option value="U1001">U1001 - John Smith</option>
+                        <option value="U1002">U1002 - Emma Davis</option>
+                        <option value="U1003">U1003 - Michael Chen</option>
+                        <option value="U1004">U1004 - Sophia Patel</option>
+                        <option value="U1005">U1005 - Liam Wilson</option>
+                    </select>
+                </div>
+                <button id="analyzeBtn" class="btn-primary">Analyze Portfolio</button>
+            </div>
+        </section>
+
+        <!-- Summary Bar -->
+        <section class="summary-bar">
+            <h2>Portfolio Analysis Summary</h2>
+            <div class="user-chip">
+                <img src="https://ui-avatars.com/api/?name=John+Smith" alt="John Smith">
+                <span>John Smith</span>
+                <span class="badge-purple">Needs Action <i data-lucide="heart"></i></span>
+            </div>
+        </section>
+
+        <div class="dashboard-grid">
+            <!-- Left Column -->
+            <div class="col-left">
+                <!-- 5-Finger Strategy Alignment -->
+                <div class="card strategy-card">
+                    <h3>5-Finger Strategy Alignment</h3>
+                    <div class="strategy-content">
+                        <div class="strategy-legend">
+                            <div class="legend-item active">
+                                <span class="dot purple"></span>
+                                <div>
+                                    <h4>Equities <span class="badge-outline">rebalancing</span></h4>
+                                    <div class="stat"><strong>85%</strong> <span class="target">85%</span></div>
+                                </div>
+                            </div>
+                            <div class="legend-item">
+                                <span class="dot light-blue"></span>
+                                <div>
+                                    <h4>Commodities</h4>
+                                    <div class="stat">28% <span class="target">10%</span></div>
+                                </div>
+                            </div>
+                            <div class="legend-item">
+                                <span class="dot yellow"></span>
+                                <div>
+                                    <h4>Debt</h4>
+                                    <div class="stat">5% <span class="target">5%</span></div>
+                                </div>
+                            </div>
+                            <div class="risk-level">
+                                <span class="dot grey"></span> Risk Level <span class="badge-warning">Moderate Risk</span>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="alignmentChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rebalance Recommendations Text -->
+                <div class="card recommendations-text">
+                    <h3>Rebalance Recommendations</h3>
+                    <p>We've generated a list of trades to rebalance <strong>John Smith's</strong> portfolio to better align with the 5-finger strategy. The cart is ready for review.</p>
+                </div>
+
+                <!-- Rebalance Cart -->
+                <div class="card cart-card">
+                    <h3>Rebalance Cart</h3>
+                    <table class="cart-table">
+                        <thead>
+                            <tr>
+                                <th>Stock</th>
+                                <th>Reason</th>
+                                <th>Current</th>
+                                <th>Target</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-right">
+                <!-- Matrix -->
+                <div class="card matrix-card">
+                    <h3>Portfolio Overlap Matrix</h3>
+                    <div class="matrix-table-wrapper">
+                        <table class="matrix-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Meticulous</th>
+                                    <th>Risk</th>
+                                    <th>Meat tati...</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matrixTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Rebalancing Summary -->
+                <div class="card rebalance-summary">
+                    <h3>Rebalancing Summary</h3>
+                    <div class="summary-charts">
+                        <div class="chart-wrapper">
+                            <canvas id="currentChart"></canvas>
+                            <div class="chart-label">Equities</div>
+                        </div>
+                        <i data-lucide="arrow-right" class="arrow"></i>
+                        <div class="chart-wrapper">
+                            <canvas id="targetChart"></canvas>
+                            <div class="chart-label">Target<br><strong>70%</strong></div>
+                        </div>
+                    </div>
+                    <div class="summary-stats">
+                        <div class="stat-row">
+                            <span><span class="dot purple"></span> Equities</span> <strong>86%</strong>
+                            <span><span class="dot blue"></span> Commodities</span> <strong>10%</strong>
+                        </div>
+                        <div class="stat-row">
+                            <span><span class="dot light-blue"></span> Debt</span> <strong>5%</strong>
+                            <span><span class="dot light-blue"></span> Fixed Income</span> <strong>20%</strong>
+                        </div>
+                        <div class="stat-row">
+                            <span><span class="dot purple-light"></span> Alternatives</span> <strong>5%</strong>
+                            <span><span class="dot green-light"></span> Fixed Income</span> <strong>5%</strong>
+                        </div>
+                    </div>
+                    <div class="total-cost">
+                        <span>Total Rebalance Cost</span>
+                        <strong class="negative">-$72,135.64</strong>
+                    </div>
+                    <button class="btn-primary full-width" onclick="alert('Execute Rebalance clicked!')">Execute Rebalance</button>
+                </div>
+
+                <!-- Current Allocations -->
+                <div class="card allocations-card">
+                    <div class="allocations-header">
+                        <h3><i data-lucide="crosshair"></i> Current Allocations</h3>
+                        <i data-lucide="chevron-up"></i>
+                    </div>
+                    <div class="allocations-list">
+                        <div class="alloc-item">
+                            <span><span class="icon purple"></span> Equities</span>
+                            <div class="alloc-values"><strong>85%</strong> <i data-lucide="arrow-right"></i> 70%</div>
+                        </div>
+                        <div class="alloc-item">
+                            <span><span class="icon blue"></span> Commodities</span>
+                            <div class="alloc-values"><strong>10%</strong> <i data-lucide="arrow-right"></i> 30%</div>
+                        </div>
+                        <div class="alloc-item">
+                            <span><span class="icon yellow"></span> Debt</span>
+                            <div class="alloc-values"><strong>5%</strong> <i data-lucide="arrow-right"></i> 20%</div>
+                        </div>
+                        <div class="alloc-item">
+                            <span><span class="icon light-blue"></span> Alternatives</span>
+                            <div class="alloc-values"><strong>5%</strong> <span>5%</span></div>
+                        </div>
+                    </div>
+                    <div class="total-cost">
+                        <span>Total Rebalance Cost</span>
+                        <strong class="negative">-$72,135.64</strong>
+                    </div>
+                    <button class="btn-primary full-width" onclick="alert('Execute Rebalance clicked!')">Execute Rebalance</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

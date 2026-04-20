@@ -1,49 +1,26 @@
-package com.example.demo.entity;
+package com.example.demo.dto;
 
-import jakarta.persistence.*;
 import java.time.LocalDate;
 
-@Entity
-@Table(name = "users")
-public class User {
+public class UserProfileResponse {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false, unique = true)
     private String email;
-
-    @Column(nullable = false)
-    private String password;
-
-    @Column
     private String name;
-
-    @Column
     private Integer age;
-
-    @Column
     private LocalDate dob;
-
-    @Column
     private String city;
-
-    @Column
     private String address;
 
-    @Column(unique = true)
-    private String pan;
-
-    public User() {
+    public UserProfileResponse() {
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
+    public UserProfileResponse(String email, String name, Integer age, LocalDate dob, String city, String address) {
+        this.email = email;
+        this.name = name;
+        this.age = age;
+        this.dob = dob;
+        this.city = city;
+        this.address = address;
     }
 
     public String getEmail() {
@@ -52,14 +29,6 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public String getName() {
@@ -100,13 +69,5 @@ public class User {
 
     public void setAddress(String address) {
         this.address = address;
-    }
-
-    public String getPan() {
-        return pan;
-    }
-
-    public void setPan(String pan) {
-        this.pan = pan;
     }
 }
