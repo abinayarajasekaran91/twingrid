@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Portfolio Analysis Report</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background-color: #f4f7f9; padding: 20px; }
+        .container { max-width: 650px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #edf2f7; padding-bottom: 20px; }
+        .header h1 { color: #3b82f6; margin: 0; font-size: 24px; }
+        .header p { color: #64748b; margin: 5px 0 0; }
+        
+        .section-title { font-size: 1.2rem; font-weight: 700; color: #1e293b; margin-top: 30px; margin-bottom: 15px; display: flex; align-items: center; }
+        
+        .score-pill-container { 
+            background: #f8fafc; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 50px; 
+            padding: 12px 25px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            margin-bottom: 25px;
+        }
+        .score-item { display: flex; align-items: center; gap: 8px; }
+        .score-label { font-size: 0.85rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-right: 5px; }
+        .val-before { font-size: 1.1rem; color: #94a3b8; text-decoration: line-through; font-weight: 600; }
+        .val-after { font-size: 1.3rem; color: #10b981; font-weight: 800; }
+        .score-arrow { color: #94a3b8; font-weight: bold; margin: 0 4px; }
+
+        .flags-box { background-color: #fff5f5; border-left: 4px solid #ef4444; padding: 15px; border-radius: 6px; margin-bottom: 25px; }
+        .flag-item { font-size: 0.9rem; color: #991b1b; margin-bottom: 8px; }
+        
+        .recommendation-item { background: #fff; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 12px; }
+        .action-badge { font-weight: 800; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; margin-left: 8px; }
+        .badge-increase { background: #dcfce7; color: #15803d; }
+        .badge-reduce { background: #fee2e2; color: #b91c1c; }
+        
+        .ai-box { background: #f5f3ff; border-radius: 12px; padding: 20px; border: 1px solid #ddd6fe; margin-top: 30px; }
+        .ai-title { color: #7c3aed; font-weight: 700; margin-bottom: 10px; font-size: 1rem; }
+        .ai-content { font-size: 1rem; color: #4c1d95; line-height: 1.5; font-style: italic; }
+
+        .footer { text-align: center; font-size: 0.8rem; color: #94a3b8; margin-top: 40px; border-top: 1px solid #edf2f7; padding-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI Portfolio Overlap analysis</h1>
+            <p>AI powered portfolio overlap and rebalancing insights for <strong th:text="${clientName}">Abinaya</strong></p>
+        </div>
+
+        <div class="score-pill-container">
+            <div class="score-item">
+                <span class="score-label">OVERLAP SCORE:</span>
+                <span class="val-before" th:text="${beforeOverlap}">3%</span>
+                <span class="score-arrow">→</span>
+                <span class="val-after" th:text="${afterOverlap}">1%</span>
+            </div>
+            <div style="border-left: 1px solid #e2e8f0; height: 20px; margin: 0 10px;"></div>
+            <div class="score-item">
+                <span class="score-label">DIVERSIFICATION:</span>
+                <span class="val-before" th:text="${beforeDiversification}">94</span>
+                <span class="score-arrow">→</span>
+                <span class="val-after" th:text="${afterDiversification}">97</span>
+            </div>
+        </div>
+
+        <div class="summary-box" style="background: #eff6ff; padding: 15px; border-radius: 10px; margin-bottom: 25px; border: 1px solid #bfdbfe;">
+            <div style="display: flex; justify-content: space-between;">
+                <span style="font-weight: 600; color: #1e40af;">Risk Profile:</span>
+                <span th:text="${riskLevel}" style="font-weight: 700; color: #1e3a8a;">Moderate</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                <span style="font-weight: 600; color: #1e40af;">Total Rebalance Cost:</span>
+                <span th:text="${rebalanceCost}" style="font-weight: 700; color: #b91c1c;">-₹60,59,384</span>
+            </div>
+        </div>
+
+        <div th:if="${not #lists.isEmpty(flags)}" class="flags-box">
+            <div style="font-weight: 800; color: #991b1b; margin-bottom: 10px; font-size: 0.9rem;">⚠️ CRITICAL INSIGHTS & RISK FLAGS</div>
+            <div th:each="flag : ${flags}" class="flag-item">• <span th:text="${flag}">Flag description</span></div>
+        </div>
+
+        <div class="section-title">AI Optimized Rebalancing Plan</div>
+        <div th:each="action : ${actions}" class="recommendation-item">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong th:text="${action.name}">Fund Name</strong>
+                <div>
+                    <span th:class="${action.action == 'increase' ? 'action-badge badge-increase' : 'action-badge badge-reduce'}" th:text="${action.action.toUpperCase()}">ACTION</span>
+                    <span th:text="${action.change}" style="font-weight: 700; margin-left: 8px;">+5%</span>
+                </div>
+            </div>
+            <div style="font-size: 0.85rem; color: #64748b; margin-top: 6px;" th:text="${action.reason}">Reasoning for the trade.</div>
+        </div>
+
+        <div class="ai-box">
+            <div class="ai-title">🧠 AI Personal Advisor Insights (<span th:text="${insightLang}">English</span>)</div>
+            <div class="ai-content" th:text="${aiInsight}">Insight text...</div>
+        </div>
+
+        <div class="footer">
+            Generated by TwinGrid AI Portfolio Advisor<br>
+            © 2026 TwinGrid Financial Services • Confidential Analysis
+        </div>
+    </div>
+</body>
+</html>

@@ -10,7 +10,6 @@ import com.example.demo.repository.StockHoldingRepository;
 import com.example.demo.entity.StockHolding;
 import com.example.demo.dao.PortfolioDao;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -39,7 +38,8 @@ public class AIAgentService {
     @Autowired
     private OpenAiClient openAiClient;
 
-
+    @Autowired
+    private EmailService emailService;
 
     public PortfolioResponse analyzePortfolio(PortfolioRequest request) {
         PortfolioResponse response = new PortfolioResponse();
@@ -61,13 +61,21 @@ public class AIAgentService {
         ClientPortfolio portfolio = optionalPortfolio.get();
         response.setStatus("SUCCESS");
         response.setMessage("AI Agent analysis complete — powered by OpenAI GPT with 5-Finger Strategy");
-        response.setClientName(portfolio.getClientName());
-        response.setRiskLevel(portfolio.getRiskLevel());
-        response.setCurrentAllocations(Arrays.asList(
-                portfolio.getCurrentEquity(), portfolio.getCurrentCommodity(), portfolio.getCurrentDebt()));
-        response.setTargetAllocations(Arrays.asList(
-                portfolio.getTargetEquity(), portfolio.getTargetCommodity(), portfolio.getTargetDebt()));
-        response.setTotalRebalanceCost(convertToRupees(portfolio.getTotalRebalanceCost()));
+        response.setClientName("Abinaya");
+        response.setRiskLevel("Moderate Risk");
+
+        // Investment Details
+        response.setInvestedAmount(72000.0);
+        response.setCurrentValue(78500.0);
+        response.setGain(6500.0);
+        response.setGainPercent(9.03);
+
+        // Hardcoded Allocations based on your 72k portfolio
+        response.setCurrentAllocations(Arrays.asList(86, 5, 5)); // Equities, Debt, Alternatives
+        response.setTargetAllocations(Arrays.asList(70, 10, 20)); // Equities, Commodities, Fixed Income
+
+        // Realistic Rebalance Cost for a 72k portfolio
+        response.setTotalRebalanceCost("-₹12,450");
 
         // ── STEP 3: Advanced Overlap Matrix Calculation (Logic from User) ────────
         String pan = request.getPan();
@@ -82,24 +90,25 @@ public class AIAgentService {
 
         // Performance Metrics
         Map<String, Object> perf = portfolioDao.getPortfolioPerformance(pan);
-        double currentValue = perf.get("currentValue") != null ? ((Number) perf.get("currentValue")).doubleValue() : 0.0;
-        double investedAmount = perf.get("investedAmount") != null ? ((Number) perf.get("investedAmount")).doubleValue() : 0.0;
-        
+        double currentValue = perf.get("currentValue") != null ? ((Number) perf.get("currentValue")).doubleValue()
+                : 0.0;
+        double investedAmount = perf.get("investedAmount") != null ? ((Number) perf.get("investedAmount")).doubleValue()
+                : 0.0;
+
         double gain = currentValue - investedAmount;
         double gainPercent = 0.0;
         if (gain != 0 && investedAmount != 0) {
             gainPercent = (gain / investedAmount) * 100;
         }
-        
+
         response.setCurrentValue(currentValue);
         response.setInvestedAmount(investedAmount);
         response.setGain(gain);
         response.setGainPercent(gainPercent);
-        
+
         // Asset Type Allocations (for Pie Chart)
         response.setAssetTypeAllocations(portfolioDao.getAssetTypeAllocations(pan));
-        
-        
+
         // Step 1: Normalize Data (Map<Fund, Map<Stock, Weight>>)
         Map<String, Map<String, Double>> fundHoldings = new HashMap<>();
         Map<String, Map<String, Double>> fundSectors = new HashMap<>();
@@ -111,9 +120,9 @@ public class AIAgentService {
             String sector = (String) row.get("sector");
             String mcap = (String) row.get("marketCap");
             double weight = ((Number) row.get("weight")).doubleValue();
-            
+
             fundHoldings.computeIfAbsent(fund, k -> new HashMap<>()).put(stock, weight);
-            
+
             if (sector != null) {
                 Map<String, Double> sMap = fundSectors.computeIfAbsent(fund, k -> new HashMap<>());
                 sMap.put(sector, sMap.getOrDefault(sector, 0.0) + weight);
@@ -143,8 +152,8 @@ public class AIAgentService {
             String fundA = fundList.get(i);
             Map<String, Object> row = new HashMap<>();
             row.put("fund", fundA);
-            row.put("iconColor", "#3b82f6"); 
-            
+            row.put("iconColor", "#3b82f6");
+
             List<Object> overlaps = new ArrayList<>();
             for (int j = 0; j < fundList.size(); j++) {
                 String fundB = fundList.get(j);
@@ -154,18 +163,18 @@ public class AIAgentService {
                     overlaps.add("-");
                 } else {
                     double score = calculateOverlap(fundHoldings.get(fundA), fundHoldings.get(fundB));
-                    
+
                     // Step 4: Portfolio-Level Overlap (Trick: score * min(weightA, weightB))
                     double weightA = fundPortfolioWeights.getOrDefault(fundA, 0.0);
                     double weightB = fundPortfolioWeights.getOrDefault(fundB, 0.0);
                     double adjustedOverlap = score * Math.min(weightA, weightB);
-                    
+
                     if (score > 0) {
                         overlaps.add(score);
                     } else {
                         overlaps.add("-");
                     }
-                    
+
                     if (score > 35) {
                         flags.add("🚨 Almost same funds: " + fundA + " & " + fundB + " (" + score + "%)");
                     } else if (score >= 20) {
@@ -173,9 +182,10 @@ public class AIAgentService {
                     } else if (score >= 10) {
                         flags.add("🟡 Acceptable overlap: " + fundA + " & " + fundB + " (" + score + "%)");
                     }
-                    
+
                     if (adjustedOverlap > 5) {
-                        flags.add("🚨 Portfolio concentration risk: " + adjustedOverlap + "% of total portfolio is duplicated between " + fundA + " & " + fundB);
+                        flags.add("🚨 Portfolio concentration risk: " + adjustedOverlap
+                                + "% of total portfolio is duplicated between " + fundA + " & " + fundB);
                     }
                 }
             }
@@ -185,20 +195,20 @@ public class AIAgentService {
         }
         response.setMatrix(matrix);
 
-
         // 3. Extra Insights (Step 8: Detect Hidden Problems)
         Map<String, Integer> stockFrequency = new HashMap<>();
         Map<String, Double> totalExposure = new HashMap<>();
-        
+
         for (String fund : fundHoldings.keySet()) {
             double fw = fundPortfolioWeights.getOrDefault(fund, 1.0 / fundHoldings.size());
             Map<String, Double> stocks = fundHoldings.get(fund);
             for (Map.Entry<String, Double> entry : stocks.entrySet()) {
                 stockFrequency.put(entry.getKey(), stockFrequency.getOrDefault(entry.getKey(), 0) + 1);
-                totalExposure.put(entry.getKey(), totalExposure.getOrDefault(entry.getKey(), 0.0) + (entry.getValue() * fw));
+                totalExposure.put(entry.getKey(),
+                        totalExposure.getOrDefault(entry.getKey(), 0.0) + (entry.getValue() * fw));
             }
         }
-        
+
         List<Map<String, Object>> stockOverlaps = new ArrayList<>();
         for (String stock : stockFrequency.keySet()) {
             if (stockFrequency.get(stock) > 1) {
@@ -207,19 +217,25 @@ public class AIAgentService {
                 so.put("fundCount", stockFrequency.get(stock));
                 so.put("exposure", Math.round(totalExposure.get(stock) * 100.0) / 100.0);
                 stockOverlaps.add(so);
-                
-                if (stockFrequency.get(stock) > 3) flags.add("🚨 Stock concentration risk: " + stock + " in " + stockFrequency.get(stock) + " funds");
-                if (totalExposure.get(stock) > 8.0) flags.add("🚨 Overexposed to " + stock + " (" + so.get("exposure") + "%)");
+
+                if (stockFrequency.get(stock) > 3)
+                    flags.add("🚨 Stock concentration risk: " + stock + " in " + stockFrequency.get(stock) + " funds");
+                if (totalExposure.get(stock) > 8.0)
+                    flags.add("🚨 Overexposed to " + stock + " (" + so.get("exposure") + "%)");
             }
         }
-        
+
         // Aggregate Sectors & MCaps
         Map<String, Double> sectorMetrics = new HashMap<>();
         Map<String, Double> mcapMetrics = new HashMap<>();
         for (String fund : fundHoldings.keySet()) {
             double fw = fundPortfolioWeights.getOrDefault(fund, 1.0 / fundHoldings.size());
-            if (fundSectors.containsKey(fund)) fundSectors.get(fund).forEach((k, v) -> sectorMetrics.put(k, Math.round((sectorMetrics.getOrDefault(k, 0.0) + (v * fw)) * 100.0) / 100.0));
-            if (fundMCaps.containsKey(fund)) fundMCaps.get(fund).forEach((k, v) -> mcapMetrics.put(k, Math.round((mcapMetrics.getOrDefault(k, 0.0) + (v * fw)) * 100.0) / 100.0));
+            if (fundSectors.containsKey(fund))
+                fundSectors.get(fund).forEach((k, v) -> sectorMetrics.put(k,
+                        Math.round((sectorMetrics.getOrDefault(k, 0.0) + (v * fw)) * 100.0) / 100.0));
+            if (fundMCaps.containsKey(fund))
+                fundMCaps.get(fund).forEach((k, v) -> mcapMetrics.put(k,
+                        Math.round((mcapMetrics.getOrDefault(k, 0.0) + (v * fw)) * 100.0) / 100.0));
         }
 
         response.setStockOverlap(stockOverlaps);
@@ -238,8 +254,9 @@ public class AIAgentService {
         double beforeDiversification = calculateDiversificationScore(beforeOverlapScore, totalExposure);
 
         // 2. Run Iterative Optimization
-        Map<String, Double> optimizedWeights = optimizePortfolio(fundList, fundHoldings, fundPortfolioWeights, portfolio);
-        
+        Map<String, Double> optimizedWeights = optimizePortfolio(fundList, fundHoldings, fundPortfolioWeights,
+                portfolio);
+
         // 3. Calculate "After" Scores
         // Recalculate exposures for "After" state
         Map<String, Double> afterTotalExposure = new HashMap<>();
@@ -247,15 +264,18 @@ public class AIAgentService {
             double fw = optimizedWeights.getOrDefault(fund, 0.0);
             Map<String, Double> stocks = fundHoldings.get(fund);
             for (Map.Entry<String, Double> entry : stocks.entrySet()) {
-                afterTotalExposure.put(entry.getKey(), afterTotalExposure.getOrDefault(entry.getKey(), 0.0) + (entry.getValue() * fw));
+                afterTotalExposure.put(entry.getKey(),
+                        afterTotalExposure.getOrDefault(entry.getKey(), 0.0) + (entry.getValue() * fw));
             }
         }
         double afterOverlapScore = calculateTotalOverlapScore(fundList, fundHoldings, optimizedWeights);
         double afterDiversification = calculateDiversificationScore(afterOverlapScore, afterTotalExposure);
 
         Map<String, Object> scores = new HashMap<>();
-        scores.put("before", Map.of("overlap", Math.round(beforeOverlapScore), "diversification", Math.round(beforeDiversification)));
-        scores.put("after", Map.of("overlap", Math.round(afterOverlapScore), "diversification", Math.round(afterDiversification)));
+        scores.put("before", Map.of("overlap", Math.round(beforeOverlapScore), "diversification",
+                Math.round(beforeDiversification)));
+        scores.put("after",
+                Map.of("overlap", Math.round(afterOverlapScore), "diversification", Math.round(afterDiversification)));
         response.setPortfolioScores(scores);
 
         // 4. Generate Optimized Actions
@@ -266,18 +286,21 @@ public class AIAgentService {
             if (Math.abs(from - to) > 0.1) {
                 Map<String, Object> action = new HashMap<>();
                 action.put("name", fund);
-                action.put("action", to > from ? "increase" : "reduce"); 
+                action.put("action", to > from ? "increase" : "reduce");
                 action.put("change", String.format("%+.1f%%", to - from));
-                
+
                 // Reason generation
                 double redundancy = 0.0;
                 for (String other : fundList) {
-                    if (!fund.equals(other)) redundancy += calculateOverlap(fundHoldings.get(fund), fundHoldings.get(other));
+                    if (!fund.equals(other))
+                        redundancy += calculateOverlap(fundHoldings.get(fund), fundHoldings.get(other));
                 }
                 if (to < from) {
-                    action.put("reason", "High redundancy score (" + Math.round(redundancy) + "%) and concentration in overlapping holdings.");
+                    action.put("reason", "High redundancy score (" + Math.round(redundancy)
+                            + "%) and concentration in overlapping holdings.");
                 } else {
-                    action.put("reason", "Low overlap and improves strategy alignment with " + portfolio.getRiskLevel() + " profile.");
+                    action.put("reason", "Low overlap and improves strategy alignment with " + portfolio.getRiskLevel()
+                            + " profile.");
                 }
                 actions.add(action);
             }
@@ -287,29 +310,41 @@ public class AIAgentService {
         response.setRecommendations(agentResult.recommendations);
         response.setAgentTrace(agentResult.trace);
 
-        // ── STEP 6: Generate AI Audio Insights (with full context) ────────────────
+        // ── STEP 6: Generate AI Audio Insights (with raw data context)
+        // ────────────────
         String lang = request.getLanguage() != null ? request.getLanguage() : "English";
-        StringBuilder detailedSummary = new StringBuilder();
-        detailedSummary.append("Client Risk Level: ").append(portfolio.getRiskLevel()).append(". ");
-        detailedSummary.append("Overlap Score improved from ").append(Map.class.cast(response.getPortfolioScores().get("before")).get("overlap"))
-                       .append("% to ").append(Map.class.cast(response.getPortfolioScores().get("after")).get("overlap")).append("%. ");
-        detailedSummary.append("Diversification Score improved from ").append(Map.class.cast(response.getPortfolioScores().get("before")).get("diversification"))
-                       .append(" to ").append(Map.class.cast(response.getPortfolioScores().get("after")).get("diversification")).append(". ");
-        detailedSummary.append("Top Recommendations: ");
-        for (int i = 0; i < Math.min(3, actions.size()); i++) {
-            detailedSummary.append(actions.get(i).get("name")).append(" (").append(actions.get(i).get("action")).append("), ");
-        }
-        detailedSummary.append(". Strategy alignment is focus of rebalancing.");
 
-        System.out.println("[AI Insights] Generating insights in language: " + lang);
-        response.setAiInsights(openAiClient.generateAudioInsights(detailedSummary.toString(), lang));
+        // Calculate gain values for the insight
+        double invested = portfolio.getInvestedAmount() != null ? portfolio.getInvestedAmount() : 72000.0;
+        double current = portfolio.getCurrentValue() != null ? portfolio.getCurrentValue() : 78450.0;
+        double insightGain = current - invested;
+        double insightGainPercent = (insightGain / invested) * 100.0;
 
-        System.out.println("[AI Agent] Analysis complete. Recommendations: " + agentResult.recommendations.size());
+        // Pass RICH raw data points
+        String rawDataPoints = String.format(
+                "CLIENT: %s | RISK: %s | INVESTED: ₹%.2f | CURRENT: ₹%.2f | GAIN: ₹%.2f (%.2f%%) | " +
+                        "OVERLAP: %s to %s | DIVERSIFICATION: %s to %s | REBALANCE COST: %s | " +
+                        "TOP REBALANCING TRADES: %s",
+                portfolio.getClientName(),
+                portfolio.getRiskLevel(),
+                invested, current, insightGain, insightGainPercent,
+                Map.class.cast(response.getPortfolioScores().get("before")).get("overlap"),
+                Map.class.cast(response.getPortfolioScores().get("after")).get("overlap"),
+                Map.class.cast(response.getPortfolioScores().get("before")).get("diversification"),
+                Map.class.cast(response.getPortfolioScores().get("after")).get("diversification"),
+                response.getTotalRebalanceCost(),
+                actions.stream().limit(5).map(a -> a.get("name") + " (" + a.get("action") + " " + a.get("change") + ")")
+                        .reduce((a, b) -> a + ", " + b).orElse("None"));
 
+        System.out.println("[AI Insights] Requesting detailed tri-language insights...");
+        response.setAiInsights(openAiClient.generateAudioInsights(rawDataPoints, lang));
+
+        System.out.println("[AI Agent] Analysis complete.");
         return response;
     }
 
-    private double calculateTotalOverlapScore(List<String> funds, Map<String, Map<String, Double>> holdings, Map<String, Double> weights) {
+    private double calculateTotalOverlapScore(List<String> funds, Map<String, Map<String, Double>> holdings,
+            Map<String, Double> weights) {
         double totalPenalty = 0.0;
         for (int i = 0; i < funds.size(); i++) {
             for (int j = i + 1; j < funds.size(); j++) {
@@ -325,20 +360,23 @@ public class AIAgentService {
     private double calculateConcentrationPenalty(Map<String, Double> exposures) {
         double penalty = 0.0;
         for (double exp : exposures.values()) {
-            if (exp > 8.0) penalty += Math.pow(exp - 8.0, 2);
+            if (exp > 8.0)
+                penalty += Math.pow(exp - 8.0, 2);
         }
         return penalty;
     }
 
     private double calculateDiversificationScore(double overlapPenalty, Map<String, Double> exposures) {
         double maxExp = 0.0;
-        for (double exp : exposures.values()) maxExp = Math.max(maxExp, exp);
+        for (double exp : exposures.values())
+            maxExp = Math.max(maxExp, exp);
         return Math.max(0, 100 - (overlapPenalty * 2) - (maxExp > 10 ? (maxExp - 10) * 3 : 0));
     }
 
-    private Map<String, Double> optimizePortfolio(List<String> funds, Map<String, Map<String, Double>> holdings, Map<String, Double> currentWeights, ClientPortfolio portfolio) {
+    private Map<String, Double> optimizePortfolio(List<String> funds, Map<String, Map<String, Double>> holdings,
+            Map<String, Double> currentWeights, ClientPortfolio portfolio) {
         Map<String, Double> weights = new HashMap<>(currentWeights);
-        
+
         // Iterative optimization (Simplified Greedy)
         for (int iter = 0; iter < 10; iter++) {
             // 1. Calculate Redundancy for each fund
@@ -346,7 +384,8 @@ public class AIAgentService {
             for (String fA : funds) {
                 double r = 0.0;
                 for (String fB : funds) {
-                    if (!fA.equals(fB)) r += calculateOverlap(holdings.get(fA), holdings.get(fB)) * weights.getOrDefault(fB, 0.0);
+                    if (!fA.equals(fB))
+                        r += calculateOverlap(holdings.get(fA), holdings.get(fB)) * weights.getOrDefault(fB, 0.0);
                 }
                 redundancy.put(fA, r);
             }
@@ -363,18 +402,22 @@ public class AIAgentService {
 
             // 3. Redistribute to low redundancy funds
             List<String> lowRedundancyFunds = new ArrayList<>();
-            for (String f : funds) if (redundancy.get(f) < 5.0) lowRedundancyFunds.add(f);
-            
+            for (String f : funds)
+                if (redundancy.get(f) < 5.0)
+                    lowRedundancyFunds.add(f);
+
             if (!lowRedundancyFunds.isEmpty()) {
                 double share = totalReduced / lowRedundancyFunds.size();
-                for (String f : lowRedundancyFunds) weights.put(f, weights.get(f) + share);
+                for (String f : lowRedundancyFunds)
+                    weights.put(f, weights.get(f) + share);
             } else {
                 // If no low redundancy funds, redistribute equally to all
                 double share = totalReduced / funds.size();
-                for (String f : funds) weights.put(f, weights.get(f) + share);
+                for (String f : funds)
+                    weights.put(f, weights.get(f) + share);
             }
         }
-        
+
         // Ensure constraints: min 0, max 40%, sum to 1
         double sum = 0.0;
         for (String f : funds) {
@@ -382,7 +425,8 @@ public class AIAgentService {
             weights.put(f, w);
             sum += w;
         }
-        for (String f : funds) weights.put(f, weights.get(f) / sum);
+        for (String f : funds)
+            weights.put(f, weights.get(f) / sum);
 
         return weights;
     }
@@ -392,13 +436,14 @@ public class AIAgentService {
      * Uses 1 USD = ₹84 exchange rate.
      */
     private String convertToRupees(String dollarStr) {
-        if (dollarStr == null) return "₹0";
+        if (dollarStr == null)
+            return "₹0";
         try {
             boolean negative = dollarStr.contains("-");
             boolean positive = dollarStr.contains("+");
             // Strip sign, $ and commas, then parse
             String cleaned = dollarStr.replace("-", "").replace("+", "")
-                                      .replace("$", "").replace(",", "").trim();
+                    .replace("$", "").replace(",", "").trim();
             double usdValue = Double.parseDouble(cleaned);
             double inrValue = usdValue * 84.0;
 
@@ -414,9 +459,11 @@ public class AIAgentService {
     }
 
     private String formatIndianNumber(long n) {
-        if (n == 0) return "0";
+        if (n == 0)
+            return "0";
         String s = Long.toString(n);
-        if (s.length() <= 3) return s;
+        if (s.length() <= 3)
+            return s;
         // Last 3 digits, then groups of 2
         StringBuilder result = new StringBuilder();
         result.insert(0, s.substring(s.length() - 3));
@@ -425,12 +472,14 @@ public class AIAgentService {
             result.insert(0, "," + s.substring(s.length() - 2));
             s = s.substring(0, s.length() - 2);
         }
-        if (!s.isEmpty()) result.insert(0, s + ",");
+        if (!s.isEmpty())
+            result.insert(0, s + ",");
         return result.toString();
     }
 
     private double calculateOverlap(Map<String, Double> fundA, Map<String, Double> fundB) {
-        if (fundA == null || fundB == null) return 0.0;
+        if (fundA == null || fundB == null)
+            return 0.0;
         double overlap = 0.0;
         for (String stock : fundA.keySet()) {
             if (fundB.containsKey(stock)) {
@@ -443,7 +492,7 @@ public class AIAgentService {
     public Map<String, Object> validateOverlap(String pan) {
         List<Map<String, Object>> rawHoldings = portfolioDao.getFundStockHoldings(pan);
         List<Map<String, Object>> clientFunds = portfolioDao.getClientFunds(pan);
-        
+
         Map<String, Map<String, Double>> fundHoldings = new HashMap<>();
         for (Map<String, Object> row : rawHoldings) {
             String fund = (String) row.get("fundName");
@@ -456,7 +505,7 @@ public class AIAgentService {
         result.put("pan", pan);
         result.put("totalFunds", fundHoldings.size());
         result.put("holdingsStructure", fundHoldings);
-        
+
         List<Map<String, Object>> pairs = new ArrayList<>();
         List<String> funds = new ArrayList<>(fundHoldings.keySet());
         for (int i = 0; i < funds.size(); i++) {
@@ -473,5 +522,68 @@ public class AIAgentService {
         }
         result.put("overlapPairs", pairs);
         return result;
+    }
+
+    public void sharePortfolioByEmail(String clientId, String recipientEmail, String language, String mode, String pan)
+            throws Exception {
+        System.out.println("[Email Debug] Sharing for Client: " + clientId + ", Lang: " + language + ", Mode: " + mode + ", PAN: " + pan);
+
+        // Use demo PAN if not provided (for demo purposes)
+        if (pan == null || pan.isEmpty()) {
+            pan = "ABCDE1234F"; // Demo PAN for testing
+            System.out.println("[Email Debug] Using demo PAN: " + pan);
+        }
+
+        PortfolioRequest request = new PortfolioRequest();
+        request.setClientId(clientId);
+        request.setLanguage(language);
+        request.setPan(pan);
+
+        PortfolioResponse data = analyzePortfolio(request);
+
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("clientName", data.getClientName());
+        variables.put("riskLevel", data.getRiskLevel());
+
+        // Before/After Scores
+        Map<String, Object> scores = data.getPortfolioScores();
+        if (scores != null) {
+            Map<String, Object> before = (Map<String, Object>) scores.get("before");
+            Map<String, Object> after = (Map<String, Object>) scores.get("after");
+
+            variables.put("beforeOverlap",
+                    (before != null && before.get("overlap") != null ? before.get("overlap") : "0") + "%");
+            variables.put("afterOverlap",
+                    (after != null && after.get("overlap") != null ? after.get("overlap") : "0") + "%");
+            variables.put("beforeDiversification", before != null ? before.get("diversification") : "0");
+            variables.put("afterDiversification", after != null ? after.get("diversification") : "0");
+        } else {
+            variables.put("beforeOverlap", "0%");
+            variables.put("afterOverlap", "0%");
+            variables.put("beforeDiversification", "0");
+            variables.put("afterDiversification", "0");
+        }
+
+        variables.put("rebalanceCost", data.getTotalRebalanceCost());
+        variables.put("actions", data.getOptimizedActions());
+        variables.put("flags", data.getFlags());
+
+        // Localized Insights based on Mode
+        String baseKey = (mode != null) ? mode.toLowerCase() : "quick";
+        String langSuffix = "";
+        if ("Tamil".equalsIgnoreCase(language))
+            langSuffix = "_ta";
+        else if ("Hindi".equalsIgnoreCase(language))
+            langSuffix = "_hin";
+
+        String finalKey = baseKey + langSuffix;
+        System.out.println("[Email Debug] Using Insight Key: " + finalKey);
+
+        variables.put("aiInsight", data.getAiInsights().getOrDefault(finalKey, data.getAiInsights().get("quick")));
+        variables.put("insightLang", (language != null && !language.isEmpty()) ? language : "English");
+
+        String subject = "AI powered portfolio overlap and rebalancing report - for " + data.getClientName();
+        emailService.sendHtmlEmail(recipientEmail, subject, "portfolio-analysis-email", variables);
+        System.out.println("[Email] Consolidated report shared successfully with subject: " + subject);
     }
 }

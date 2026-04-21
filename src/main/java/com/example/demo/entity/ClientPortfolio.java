@@ -27,6 +27,8 @@ public class ClientPortfolio {
     private int targetDebt;
 
     private String totalRebalanceCost;
+    private Double investedAmount;
+    private Double currentValue;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -60,4 +62,10 @@ public class ClientPortfolio {
 
     public String getTotalRebalanceCost() { return totalRebalanceCost; }
     public void setTotalRebalanceCost(String totalRebalanceCost) { this.totalRebalanceCost = totalRebalanceCost; }
+
+    public Double getInvestedAmount() { return investedAmount; }
+    public void setInvestedAmount(Double investedAmount) { this.investedAmount = investedAmount; }
+
+    public Double getCurrentValue() { return currentValue; }
+    public void setCurrentValue(Double currentValue) { this.currentValue = currentValue; }
 }

@@ -17,6 +17,7 @@
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dto/PanResponse.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dto/PortfolioRequest.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dto/PortfolioResponse.java
+/Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dto/ShareEmailRequest.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dto/UserProfileRequest.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/dto/UserProfileResponse.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/entity/ClientPortfolio.java
@@ -34,6 +35,7 @@
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/repository/StockHoldingRepository.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/service/AIAgentService.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/service/AuthService.java
+/Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/service/EmailService.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/service/OpenAiClient.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/service/UserService.java
 /Users/fiuser/Developer/code/hackathon/twingrid/src/main/java/com/example/demo/service/impl/AuthServiceImpl.java

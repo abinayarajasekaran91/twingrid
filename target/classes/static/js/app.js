@@ -297,9 +297,9 @@ async function analyzePortfolio() {
     const btn = document.getElementById('analyzeBtn');
     const clientId = document.getElementById('clientSelect').value;
     const language = document.getElementById('languageSelectTop').value;
-    
+
     console.log(`[Frontend] Analyzing portfolio for Client: ${clientId}, Language: ${language}`);
-    
+
     if(btn) {
         btn.textContent = 'Analyzing...';
         btn.disabled = true;
@@ -313,7 +313,7 @@ async function analyzePortfolio() {
             },
             body: JSON.stringify({ clientId, language })
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             updateUI(data);
@@ -324,7 +324,7 @@ async function analyzePortfolio() {
         console.error('Error fetching analysis:', e);
     } finally {
         if(btn) {
-            btn.textContent = 'Analyze Portfolio';
+            btn.textContent = 'Analyze & Generate Voice';
             btn.disabled = false;
         }
     }
@@ -403,6 +403,50 @@ function playAudio(mode) {
     }, 50);
 }
 
+async function shareViaEmail() {
+    const email = document.getElementById('shareEmailInput').value;
+    const clientId = document.getElementById('clientSelect').value;
+    const language = document.getElementById('languageSelectTop').value;
+    const mode = document.getElementById('shareEmailMode').value;
+    const btn = document.getElementById('shareEmailBtn');
+    const status = document.getElementById('shareEmailStatus');
+
+    if (!email || !email.includes('@')) {
+        alert('Please enter a valid email address.');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    status.style.display = 'block';
+    status.style.color = 'var(--text-muted)';
+    status.textContent = 'Preparing consolidated report...';
+
+    try {
+        const response = await fetch('/api/portfolio/share-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clientId, recipientEmail: email, language, mode })
+        });
+
+        const data = await response.json();
+        if (data.status === 'SUCCESS') {
+            status.style.color = '#10b981';
+            status.textContent = '✅ ' + data.message;
+            document.getElementById('shareEmailInput').value = '';
+        } else {
+            status.style.color = '#ef4444';
+            status.textContent = '❌ ' + data.message;
+        }
+    } catch (e) {
+        status.style.color = '#ef4444';
+        status.textContent = '❌ Error: ' + e.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Report';
+    }
+}
+
 function stopAudio() {
     window.speechSynthesis.cancel();
 }
@@ -411,3 +455,4 @@ function stopAudio() {
 window.analyzePortfolio = analyzePortfolio;
 window.playAudio = playAudio;
 window.stopAudio = stopAudio;
+window.shareViaEmail = shareViaEmail;
