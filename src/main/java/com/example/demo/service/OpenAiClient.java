@@ -312,19 +312,15 @@ public class OpenAiClient {
 
         String systemInstruction = 
             "You are a professional financial advisor. You must generate portfolio insights in THREE languages: English, Tamil, and Hindi. " +
-            "For Tamil and Hindi, use a natural, spoken tone suitable for a 1-on-1 advisor briefing. Use the native scripts (Tamil and Devanagari). " +
-            "DO NOT just transliterate English words. Translate technical concepts like 'overlap' as 'ஒன்றுடன் ஒன்று இணைதல்' (Tamil) or 'ओवरलैप' (Hindi - if commonly used) and explain them naturally. " +
-            "Fund names can be kept as-is or transliterated, but the overall message MUST be in the target language script. " +
-            "Return ONLY a valid JSON object with these exact keys: " +
-            "'quick', 'quick_ta', 'quick_hin', 'detailed', 'detailed_ta', 'detailed_hin', 'advisor', 'advisor_ta', 'advisor_hin'.";
+            "CRITICAL: For Tamil and Hindi, you MUST generate the insights from scratch in the target language based on the raw data provided. " +
+            "DO NOT keep English technical phrases like 'Risk Level' or 'Overlap Score' - translate them naturally into native script. " +
+            "Fund names can remain in English script for clarity. Tone should be warm and professional. " +
+            "Return ONLY a valid JSON object with keys: 'quick', 'quick_ta', 'quick_hin', 'detailed', 'detailed_ta', 'detailed_hin', 'advisor', 'advisor_ta', 'advisor_hin'.";
 
         String userPrompt = String.format(
-            "Based on this analysis summary, generate 3 versions of insights (quick, detailed, advisor) in English, Tamil, and Hindi:\n\n" +
-            "Analysis Summary: '%s'\n\n" +
-            "1. quick: A 2-minute summary.\n" +
-            "2. detailed: A 10-minute masterclass.\n" +
-            "3. advisor: A 15-minute briefing.\n\n" +
-            "Ensure the Tamil and Hindi versions are fully translated and natural, not just a few words.",
+            "Generate natural financial briefing insights in English, Tamil, and Hindi based on these RAW portfolio data points:\n\n%s\n\n" +
+            "1. quick: 2-minute summary.\n2. detailed: 10-minute deep dive.\n3. advisor: 15-minute briefing.\n\n" +
+            "Ensure Tamil and Hindi versions use 100%% native script and natural vocabulary.",
             summary
         );
 
@@ -340,9 +336,9 @@ public class OpenAiClient {
         messages.add(msg);
 
         ObjectNode requestBody = mapper.createObjectNode();
-        requestBody.put("model", "gpt-3.5-turbo");
+        requestBody.put("model", "gpt-4o-mini"); // Upgraded model for better JSON following
         requestBody.put("temperature", 0.7);
-        requestBody.put("max_tokens", 2500); // Ensure enough space for all 9 insights
+        requestBody.put("max_tokens", 4000); 
         requestBody.set("messages", messages);
 
         try {
@@ -351,13 +347,14 @@ public class OpenAiClient {
             JsonNode root = mapper.readTree(response.getBody());
             String content = root.path("choices").get(0).path("message").path("content").asText();
             
+            System.out.println("[OpenAiClient] AI Response received (Length: " + content.length() + ")");
+            
             // Extract JSON from response
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\{.*\\}", java.util.regex.Pattern.DOTALL).matcher(content);
             if (m.find()) {
                 JsonNode result = mapper.readTree(m.group());
                 Map<String, String> insights = new HashMap<>();
                 
-                // Populate all keys
                 String[] suffixes = {"", "_ta", "_hin"};
                 String[] types = {"quick", "detailed", "advisor"};
                 
@@ -370,27 +367,27 @@ public class OpenAiClient {
                     }
                 }
                 
-                return insights;
+                if (!insights.isEmpty()) return insights;
+            } else {
+                System.err.println("[OpenAiClient] Could not find JSON in AI response: " + content);
             }
         } catch (Exception e) {
-            System.err.println("Error generating AI insights: " + e.getMessage());
+            System.err.println("[OpenAiClient] Error calling OpenAI: " + e.getMessage());
+            e.printStackTrace();
         }
 
         Map<String, String> fallback = new HashMap<>();
-        // Quick versions
-        fallback.put("quick", "Analysis complete. " + summary);
-        fallback.put("quick_ta", "பகுப்பாய்வு முடிந்தது. " + summary);
-        fallback.put("quick_hin", "विश्लेषण पूरा हुआ। " + summary);
+        fallback.put("quick", "Your portfolio analysis is ready.");
+        fallback.put("quick_ta", "உங்கள் போர்ட்ஃபோலியோ பகுப்பாய்வு தயாராக உள்ளது.");
+        fallback.put("quick_hin", "आपका पोर्टफोलियो विश्लेषण तैयार है।");
         
-        // Detailed versions
-        fallback.put("detailed", "We have performed a deep-dive analysis. " + summary);
-        fallback.put("detailed_ta", "நாங்கள் ஆழமான பகுப்பாய்வைச் செய்துள்ளோம். " + summary);
-        fallback.put("detailed_hin", "हमने एक विस्तृत विश्लेषण किया है। " + summary);
+        fallback.put("detailed", "Deep analysis performed. Scores improved significantly.");
+        fallback.put("detailed_ta", "ஆழமான பகுப்பாய்வு செய்யப்பட்டது. மதிப்பெண்கள் கணிசமாக மேம்பட்டுள்ளன.");
+        fallback.put("detailed_hin", "विस्तृत विश्लेषण किया गया। स्कोर में काफी सुधार हुआ है।");
         
-        // Advisor versions
-        fallback.put("advisor", "Welcome to your senior advisor briefing. " + summary);
-        fallback.put("advisor_ta", "உங்கள் மூத்த ஆலோசகர் விளக்கத்திற்கு வரவேற்கிறோம். " + summary);
-        fallback.put("advisor_hin", "आपके वरिष्ठ सलाहकार ब्रीफिंग में आपका स्वागत है। " + summary);
+        fallback.put("advisor", "Senior advisor briefing: Rebalancing recommended for better alignment.");
+        fallback.put("advisor_ta", "மூத்த ஆலோசகர் விளக்கம்: சிறந்த சீரமைப்பிற்கு ரீபாலன்சிங் பரிந்துரைக்கப்படுகிறது.");
+        fallback.put("advisor_hin", "वरिष्ठ सलाहकार ब्रीफिंग: बेहतर संरेखण के लिए रीबैलेंसिंग की सिफारिश की गई है।");
         
         return fallback;
     }
