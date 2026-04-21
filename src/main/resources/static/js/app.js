@@ -136,12 +136,49 @@ function updateUI(data) {
         if (pieLegend) {
             const colors = allocationPieChart.data.datasets[0].backgroundColor;
             pieLegend.innerHTML = data.assetTypeAllocations.map((a, i) => `
-                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
-                    <span style="width: 12px; height: 12px; border-radius: 50%; background: ${colors[i % colors.length]};"></span>
-                    <span style="font-weight: 600; color: var(--text-main);">${a.assetType}</span>
-                    <span style="color: var(--text-muted);">${a.allocationPercent}%</span>
+                <div class="reb-legend-item">
+                    <span class="reb-legend-dot" style="background: ${colors[i % colors.length]};"></span>
+                    <span class="reb-legend-label">${a.assetType}</span>
+                    <span class="reb-legend-value">${a.allocationPercent}%</span>
                 </div>
             `).join('');
+        }
+    }
+
+    // Update Stats Grid
+    if (data.statsGrid) {
+        if (data.statsGrid.equities) document.getElementById('statEquities').textContent = data.statsGrid.equities;
+        if (data.statsGrid.commodities) document.getElementById('statCommodities').textContent = data.statsGrid.commodities;
+        if (data.statsGrid.debt) document.getElementById('statDebt').textContent = data.statsGrid.debt;
+        if (data.statsGrid.fixedIncome) document.getElementById('statFixedIncome').textContent = data.statsGrid.fixedIncome;
+    }
+
+    // Update client name badge
+    if (data.clientName) {
+        const recBadge = document.getElementById('recClientName');
+        if (recBadge) recBadge.textContent = data.clientName;
+    }
+
+    // Populate Recommendations Table
+    if (data.recommendations && data.recommendations.length > 0) {
+        const tbody = document.getElementById('recommendationsTableBody');
+        if (tbody) {
+            tbody.innerHTML = data.recommendations.map(rec => `
+                <tr>
+                    <td>
+                        <span class="table-action ${rec.action.toLowerCase()}">
+                            <i data-lucide="${rec.action === 'Buy' ? 'trending-up' : rec.action === 'Sell' ? 'trending-down' : 'minus'}" style="width: 14px; height: 14px;"></i>
+                            ${rec.action}
+                        </span>
+                    </td>
+                    <td><strong>${rec.stock}</strong></td>
+                    <td>${rec.current}</td>
+                    <td>${rec.target}</td>
+                    <td>${rec.units}</td>
+                    <td>${rec.amount}</td>
+                </tr>
+            `).join('');
+            if (window.lucide) lucide.createIcons();
         }
     }
 
@@ -171,15 +208,19 @@ function updateUI(data) {
         if (planCard && actionsList) {
             planCard.style.display = 'block';
             actionsList.innerHTML = data.optimizedActions.map(action => `
-                <div class="opt-action-item">
-                    <div class="opt-action-header">
-                        <span class="opt-fund-name">${action.name}</span>
-                        <span class="${action.action === 'increase' ? 'badge-green' : 'badge-red'}">${action.action.toUpperCase()}</span>
-                        <span class="opt-change-text ${action.action === 'increase' ? 'text-green' : 'text-red'}">
-                            ${action.change}
-                        </span>
+                <div class="reb-opt-item">
+                    <div class="reb-opt-icon ${action.action}">
+                        <i data-lucide="${action.action === 'increase' ? 'trending-up' : 'trending-down'}" style="width: 16px; height: 16px;"></i>
                     </div>
-                    <div class="opt-action-reason">${action.reason}</div>
+                    <div class="reb-opt-content">
+                        <div>
+                            <span class="reb-opt-name">${action.name}</span>
+                            <span class="reb-opt-change ${action.action === 'increase' ? 'positive' : 'negative'}">
+                                ${action.change}
+                            </span>
+                        </div>
+                        <div class="reb-opt-reason">${action.reason}</div>
+                    </div>
                 </div>
             `).join('');
         }
@@ -214,18 +255,18 @@ function updateUI(data) {
 }
 
 function renderMatrix(headerId, bodyId, matrixData) {
-    const getBgStyle = (val) => {
-        if (val === 100) return 'background-color: #1e3a8a; color: white; font-weight: bold;'; 
-        if (val === 0 || val === '-') return 'background-color: white; color: #94a3b8;'; 
-        if (val > 35) return 'background-color: #ef4444; color: white;'; // Red 🚨
-        if (val >= 20) return 'background-color: #f97316; color: white;'; // Orange ⚠️
-        if (val >= 10) return 'background-color: #f59e0b; color: white;'; // Yellow 🟡
-        return 'background-color: #10b981; color: white;'; // Green 🟢
+    const getCellClass = (val) => {
+        if (val === 100) return 'gray';
+        if (val === 0 || val === '-') return 'gray';
+        if (val > 35) return 'red';
+        if (val >= 20) return 'orange';
+        if (val >= 10) return 'yellow';
+        return 'green';
     };
 
     const headerRow = document.getElementById(headerId);
     const matrixBody = document.getElementById(bodyId);
-    
+
     if (!headerRow || !matrixBody) return;
 
     let headerHtml = `<th>Sr</th><th>Investment Name</th>`;
@@ -236,23 +277,15 @@ function renderMatrix(headerId, bodyId, matrixData) {
 
     matrixBody.innerHTML = matrixData.map((row, i) => `
         <tr>
-            <td style="color: var(--text-muted); font-size: 0.8rem;">${i + 1}</td>
-            <td style="min-width: 250px;">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div class="icon-wrapper" style="background-color: ${row.iconColor || '#3b82f6'}; width: 24px; height: 24px;">
-                        <i data-lucide="activity" style="width: 12px; height: 12px;"></i>
-                    </div>
-                    <span style="font-size: 0.85rem;">${row.fund}</span>
-                </div>
-            </td>
-            ${row.overlaps.map((val, j) => `
-                <td style="text-align: center; padding: 0.5rem; border: 1px solid #f1f5f9; font-size: 0.8rem; ${getBgStyle(val)}">
-                    ${val}
+            <td style="color: #94a3b8; font-size: 0.75rem;">${i + 1}</td>
+            <td style="text-align: left; min-width: 200px; font-size: 0.8rem; font-weight: 500;">${row.fund}</td>
+            ${row.overlaps.map((val) => `
+                <td>
+                    <div class="matrix-cell ${getCellClass(val)}">${val}</div>
                 </td>
             `).join('')}
         </tr>
     `).join('');
-
 
     // Re-initialize lucide icons for dynamic elements
     if (window.lucide) {

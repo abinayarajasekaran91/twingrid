@@ -6,9 +6,6 @@ import com.example.demo.service.AIAgentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
 @RestController
 @RequestMapping("/api/portfolio")
 public class PortfolioController {
@@ -24,11 +21,6 @@ public class PortfolioController {
     @PostMapping("/overlap-validation")
     public java.util.Map<String, Object> validateOverlap(@RequestBody PortfolioRequest request) {
         return aiAgentService.validateOverlap(request.getPan());
-    }
-
-    @GetMapping("/status/{clientId}")
-    public Map<String, Object> getAnalysisStatus(@PathVariable String clientId) {
-        return aiAgentService.getAnalysisStatus(clientId);
     }
 }
 

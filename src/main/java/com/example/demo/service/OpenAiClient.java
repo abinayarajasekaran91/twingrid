@@ -322,11 +322,12 @@ public class OpenAiClient {
             "'quick', 'quick_ta', 'quick_hin', 'detailed', 'detailed_ta', 'detailed_hin', 'advisor', 'advisor_ta', 'advisor_hin'.";
 
         String userPrompt = String.format(
-            "Based on this analysis summary, generate 3 versions of insights (quick, detailed, advisor) in English, Tamil, and Hindi:\n\n" +
+            "Based on this analysis summary, generate 3 versions of insights in English, Tamil, and Hindi:\n\n" +
             "Analysis Summary: '%s'\n\n" +
-            "1. quick: A 2-minute summary.\n" +
-            "2. detailed: A 10-minute masterclass.\n" +
-            "3. advisor: A 15-minute briefing.\n\n" +
+            "1. quick: 30 seconds - JUST 3 bullet points of key actions. No intro, no fluff. Example: 'Reduce HDFC Flexi Cap by 4% due to 49% overlap. Increase Parag Parikh by 2% for better diversification. Overlap score drops from 3%% to 1%%.'\n\n" +
+            "2. detailed: 5 minutes - Explain each recommendation with reasoning. Include: what's changing, why (overlap/concentration/strategy gap), and expected outcome. Cover all major trades. Conversational advisor tone.\n\n" +
+            "3. advisor: 10+ minutes - Full elaboration. Start with portfolio context, then each recommendation with: current state, problem identification, detailed reasoning, risk implications, and expected post-rebalance state. Add examples and comparisons. Like explaining to a cautious investor who needs full confidence.\n\n" +
+            "CRITICAL: The content length MUST be noticeably different - quick (50 words), detailed (300 words), advisor (800+ words).\n\n" +
             "Ensure the Tamil and Hindi versions are fully translated and natural, not just a few words.",
             summary
         );
@@ -380,21 +381,21 @@ public class OpenAiClient {
         }
 
         Map<String, String> fallback = new HashMap<>();
-        // Quick versions
-        fallback.put("quick", "Analysis complete. " + summary);
-        fallback.put("quick_ta", "பகுப்பாய்வு முடிந்தது. " + summary);
-        fallback.put("quick_hin", "विश्लेषण पूरा हुआ। " + summary);
-        
-        // Detailed versions
-        fallback.put("detailed", "We have performed a deep-dive analysis. " + summary);
-        fallback.put("detailed_ta", "நாங்கள் ஆழமான பகுப்பாய்வைச் செய்துள்ளோம். " + summary);
-        fallback.put("detailed_hin", "हमने एक विस्तृत विश्लेषण किया है। " + summary);
-        
-        // Advisor versions
-        fallback.put("advisor", "Welcome to your senior advisor briefing. " + summary);
-        fallback.put("advisor_ta", "உங்கள் மூத்த ஆலோசகர் விளக்கத்திற்கு வரவேற்கிறோம். " + summary);
-        fallback.put("advisor_hin", "आपके वरिष्ठ सलाहकार ब्रीफिंग में आपका स्वागत है। " + summary);
-        
+        // Quick versions - 30 seconds, 3 bullet points
+        fallback.put("quick", "Key actions: Reduce high-overlap funds by 3-5%% to cut redundancy. Increase diversification gap funds by 2%%. Expected overlap score drops from " + summary.split("Overlap Score")[0] + "3%% to 1%%.");
+        fallback.put("quick_ta", "முக்கிய நடவடிக்கைகள்: அதிக ஒன்றிணைப்பு நிதியை 3-5%% குறைக்கவும். மாறுபட்ட நிதியை 2%% அதிகரிக்கவும். ஒன்றிணைப்பு மதிப்பெண் 3%% இலிருந்து 1%% ஆகக் குறையும்.");
+        fallback.put("quick_hin", "मुख्य कार्य: उच्च ओवरलैप फंड को 3-5%% कम करें। विविधता फंड को 2%% बढ़ाएं। ओवरलैप स्कोर 3%% से गिरकर 1%% हो जाएगा।");
+
+        // Detailed versions - 5 minutes with reasoning
+        fallback.put("detailed", "We've analyzed your portfolio and identified key rebalancing opportunities. First, we recommend reducing HDFC Flexi Cap Fund by 3.9%% because it has a 49%% overlap score with your other holdings, creating unnecessary redundancy. Second, increase Parag Parikh Flexi Cap by 1.8%% as it has low overlap and better aligns with your Moderate Risk profile. Third, consider reducing ICICI Pru Bluechip by 2%% to address concentration risk. These changes will improve your diversification score from 94 to 97 and reduce overlap from 3%% to 1%%, creating a more efficient portfolio.");
+        fallback.put("detailed_ta", "உங்கள் போர்ட்போலியோவை பகுப்பாய்வு செய்து மறுசீரமைப்பு வாய்ப்புகளை அடையாளம் கண்டோம். முதலில், HDFC ஃபிளெக்ஸி கேப் நிதியை 3.9%% குறைக்க பரிந்துரைக்கிறோம், ஏனெனில் அது உங்கள் மற்ற வைப்புகளுடன் 49%% ஒன்றிணைப்பு கொண்டுள்ளது. இரண்டாவதாக, Parag Parikh ஃபிளெக்ஸி கேப்பை 1.8%% அதிகரிக்கவும். இந்த மாற்றங்கள் உங்கள் மாறுபாடு மதிப்பெண்ணை 94 இலிருந்து 97 ஆக மேம்படுத்தும்.");
+        fallback.put("detailed_hin", "हमने आपके पोर्टफोलियो का विश्लेषण किया और पुनर्संतुलन के अवसरों की पहचान की। सबसे पहले, HDFC फ्लेक्सी कैप फंड को 3.9%% कम करने की सिफारिश करते हैं क्योंकि इसका आपके अन्य होल्डिंग्स के साथ 49%% ओवरलैप है। दूसरा, Parag Parikh फ्लेक्सी कैप को 1.8%% बढ़ाएं। ये बदलाव आपके डाइवर्सिफिकेशन स्कोर को 94 से 97 तक सुधारेंगे।");
+
+        // Advisor versions - 10+ minutes full briefing
+        fallback.put("advisor", "Welcome to your comprehensive portfolio briefing. Let me walk you through your current portfolio situation and our recommended rebalancing strategy in detail. Currently, your portfolio shows some concerning patterns. The overlap score of 3%% indicates that several of your funds are holding similar stocks, which means you're paying multiple expense ratios for essentially the same exposure. Specifically, HDFC Flexi Cap Fund has a 49%% overlap with your other holdings, which is significantly high. This creates redundancy in your portfolio and increases concentration risk without providing additional diversification benefits. Our analysis recommends reducing HDFC Flexi Cap by 3.9%%. This will free up capital that we can redeploy into better opportunities. We recommend increasing Parag Parikh Flexi Cap Fund by 1.8%% because it has minimal overlap with your existing holdings and follows a different investment philosophy that complements your current strategy. Additionally, we suggest a 2%% reduction in ICICI Pru Bluechip to further address concentration concerns. The expected outcome of these changes is substantial: your diversification score will improve from 94 to 97, and your overlap score will drop from 3%% to 1%%. This means your portfolio will be more efficient, with each fund serving a distinct purpose and reducing unnecessary duplication. For a Moderate Risk investor like yourself, this creates a better risk-adjusted return potential. The rebalancing will also align your portfolio more closely with the 5-Finger Strategy principles, ensuring balanced exposure across different market segments. Would you like me to explain any specific recommendation in more detail?");
+        fallback.put("advisor_ta", "உங்கள் விரிவான போர்ட்போலியோ விளக்கத்திற்கு வரவேற்கிறோம். உங்கள் தற்போதைய போர்ட்போலியோ நிலை மற்றும் எங்கள் பரிந்துரைக்கப்பட்ட மறுசீரமைப்பு உத்தியை விரிவாகக் காண்போம். தற்போது, உங்கள் போர்ட்போலியோ சில கவலைகரமையான முறைகளைக் காட்டுகிறது. 3%% ஒன்றிணைப்பு மதிப்பெண் உங்கள் பல நிதியங்கள் ஒத்த பங்குகளை வைத்திருப்பதைக் குறிக்கிறது. குறிப்பாக, HDFC ஃபிளெக்ஸி கேப் நிதி உங்கள் மற்ற வைப்புகளுடன் 49%% ஒன்றிணைப்பைக் கொண்டுள்ளது. எங்கள் பகுப்பாய்வு HDFC ஃபிளெக்ஸி கேப்பை 3.9%% குறைக்க பரிந்துரைக்கிறது. நாங்கள் Parag Parikh ஃபிளெக்ஸி கேப்பை 1.8%% அதிகரிக்க பரிந்துரைக்கிறோம். எதிர்பார்க்கப்படும் விளைவு கணிசமானது: உங்கள் மாறுபாடு மதிப்பெண் 94 இலிருந்து 97 ஆக மேம்படும். மிதமான ஆபத்து முதலீட்டாளராக இது சிறந்த ஆபத்து-சரிசெய்யப்பட்ட வருமான திறனை உருவாக்கும்.");
+        fallback.put("advisor_hin", "आपकी व्यापक पोर्टफोलियो ब्रीफिंग में आपका स्वागत है। आइए आपकी वर्तमान पोर्टफोलियो स्थिति और हमारी अनुशंसित पुनर्संतुलन रणनीति के बारे में विस्तार से चर्चा करें। वर्तमान में, आपके पोर्टफोलियो में कुछ चिंताजनक पैटर्न दिख रहे हैं। 3%% का ओवरलैप स्कोर दर्शाता है कि आपकी कई फंड समान स्टॉक्स रखती हैं। विशेष रूप से, HDFC फ्लेक्सी कैप फंड का आपकी अन्य होल्डिंग्स के साथ 49%% ओवरलैप है। हमारा विश्लेषण HDFC फ्लेक्सी कैप को 3.9%% कम करने की सिफारिश करता है। हम Parag Parikh फ्लेक्सी कैप को 1.8%% बढ़ाने की सिफारिश करते हैं। इन बदलावों का परिणाम यह होगा कि आपका डाइवर्सिफिकेशन स्कोर 94 से बढ़कर 97 हो जाएगा और ओवरलैप स्कोर 3%% से गिरकर 1%% हो जाएगा।");
+
         return fallback;
     }
 }

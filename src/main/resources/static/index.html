@@ -4,15 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>5-Finger Strategy Portfolio Analysis & Rebalancing Tool</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=1.1">
+    <title>Rebalance - Fin-grid</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=1.2">
+    <link rel="stylesheet" href="css/rebalance.css?v=1.2">
     <!-- Chart.js for donut charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Lucide icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Cache-busting app.js -->
-    <script src="js/app.js?v=1.1"></script>
+    <script src="js/app.js?v=1.2"></script>
 </head>
 
 <body>
@@ -41,25 +41,18 @@
         </div>
     </nav>
 
-    <main class="dashboard">
+    <main class="rebalance-page">
         <!-- Header Banner -->
-        <section class="banner-card">
-            <div class="banner-content">
+        <section class="reb-header-banner">
+            <div class="reb-banner-content">
                 <h1>5-Finger Strategy Portfolio Analysis & Rebalancing Tool</h1>
-                <p>Advisors manually review client portfolios for fund overlap, concentration risk, and alignment with
-                    the 5-finger strategy. This is slow and inconsistent across advisors.</p>
-                <p>Build a tool that takes a client portfolio, analyses overlap across holdings, maps it to the 5-finger
-                    framework, identifies gaps/over-concentration, and generates a cart with rebalancing recommendations
-                    with reasoning.</p>
+                <p>Build a tool that takes a client portfolio, analyses overlap across holdings, maps it to the 5-finger framework, identifies gaps/over-concentration, and generates a cart with rebalancing recommendations with reasoning.</p>
             </div>
-            <div class="banner-action">
-                <div class="client-selector"
-                    style="display: flex; gap: 0.5rem; background: #f8fafc; padding: 0.5rem; border-radius: 12px; border: 2px solid #3b82f6;">
-                    <div
-                        style="display: flex; align-items: center; gap: 0.5rem; border-right: 1px solid #e2e8f0; padding-right: 0.8rem;">
-                        <i data-lucide="user" style="color: #3b82f6; width: 18px;"></i>
-                        <select id="clientSelect"
-                            style="border: none; outline: none; font-size: 1rem; font-weight: 600; color: #1e293b; background: transparent;">
+            <div class="reb-banner-controls">
+                <div class="client-selector">
+                    <div class="selector-group">
+                        <i data-lucide="user" class="selector-icon"></i>
+                        <select id="clientSelect" class="client-select">
                             <option value="U1001">U1001 - John Smith</option>
                             <option value="U1002">U1002 - Emma Davis</option>
                             <option value="U1003">U1003 - Michael Chen</option>
@@ -67,161 +60,211 @@
                             <option value="U1005">U1005 - Liam Wilson</option>
                         </select>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; padding-left: 0.5rem;">
-                        <i data-lucide="languages" style="color: #8b5cf6; width: 18px;"></i>
-                        <select id="languageSelectTop"
-                            style="border: none; outline: none; font-size: 1rem; font-weight: 700; color: #8b5cf6; background: transparent; cursor: pointer;">
-                            <option value="English">English Audio</option>
+                    <div class="divider"></div>
+                    <div class="selector-group">
+                        <i data-lucide="languages" class="selector-icon purple"></i>
+                        <select id="languageSelectTop" class="language-select">
+                            <option value="English">English</option>
                             <option value="Tamil">Tamil (தமிழ்)</option>
                             <option value="Hindi">Hindi (हिन्दी)</option>
                         </select>
                     </div>
                 </div>
-                <button id="analyzeBtn" class="btn-primary" onclick="window.analyzePortfolio()"
-                    style="padding: 0.8rem 2rem; font-size: 1rem; font-weight: 700;">Analyze & Generate Voice</button>
+                <button id="analyzeBtn" class="reb-analyze-btn" onclick="window.analyzePortfolio()">
+                    <i data-lucide="sparkles"></i>
+                    Analyze & Generate Voice
+                </button>
             </div>
         </section>
 
-        <!-- Summary Bar -->
-        <section class="summary-bar">
-            <h2>Portfolio Analysis Summary</h2>
-            <div class="user-chip">
-                <img src="https://ui-avatars.com/api/?name=John+Smith" alt="John Smith">
-                <span>John Smith</span>
-                <span class="badge-purple">Needs Action <i data-lucide="heart"></i></span>
-            </div>
-            <div id="portfolioScores" class="portfolio-scores-summary"
-                style="display: none; margin-left: auto; gap: 2rem; align-items: center;">
-                <div class="score-item">
-                    <span class="score-label">Overlap Score:</span>
-                    <span id="beforeOverlap" class="score-val before">42%</span>
-                    <i data-lucide="arrow-right" class="arrow-small"></i>
-                    <span id="afterOverlap" class="score-val after">18%</span>
-                </div>
-                <div class="score-item">
-                    <span class="score-label">Diversification:</span>
-                    <span id="beforeDiversification" class="score-val before">58</span>
-                    <i data-lucide="arrow-right" class="arrow-small"></i>
-                    <span id="afterDiversification" class="score-val after">84</span>
+        <!-- Summary Stats Bar -->
+        <section class="reb-summary-bar" id="portfolioScores" style="display: none;">
+            <div class="reb-summary-item">
+                <span class="reb-summary-label">Overlap Score</span>
+                <div class="reb-score-comparison">
+                    <span class="score-before" id="beforeOverlap">42%</span>
+                    <i data-lucide="arrow-right" class="score-arrow"></i>
+                    <span class="score-after" id="afterOverlap">18%</span>
                 </div>
             </div>
-
-            <div id="performanceMetrics" class="performance-metrics"
-                style="display: none; margin-left: 2rem; gap: 1.5rem; align-items: center; border-left: 1px solid var(--border-color); padding-left: 1.5rem;">
-                <div class="perf-item">
-                    <span class="perf-label">Invested</span>
-                    <span id="investedAmount" class="perf-val">₹0</span>
-                </div>
-                <div class="perf-item">
-                    <span class="perf-label">Current</span>
-                    <span id="currentValue" class="perf-val">₹0</span>
-                </div>
-                <div class="perf-item">
-                    <span class="perf-label">Gain</span>
-                    <div style="display: flex; align-items: center;">
-                        <span id="gainVal" class="perf-val">₹0</span>
-                        <span id="gainPercent" class="perf-badge">0%</span>
-                    </div>
+            <div class="reb-summary-divider"></div>
+            <div class="reb-summary-item">
+                <span class="reb-summary-label">Diversification</span>
+                <div class="reb-score-comparison">
+                    <span class="score-before" id="beforeDiversification">58</span>
+                    <i data-lucide="arrow-right" class="score-arrow"></i>
+                    <span class="score-after" id="afterDiversification">84</span>
                 </div>
             </div>
         </section>
 
-        <div class="dashboard-grid">
+        <div class="reb-grid">
             <!-- Left Column -->
-            <div class="col-left">
-                <!-- Current Allocation Pie Chart -->
-                <div class="card allocation-pie-card">
-                    <h3>Current Portfolio Allocation (by Asset Type)</h3>
-                    <div style="display: flex; align-items: center; justify-content: center; min-height: 250px;">
-                        <div style="width: 200px; height: 200px; position: relative;">
+            <div class="reb-col-left">
+                <!-- AI Voice Insights Card -->
+                <div class="reb-card reb-ai-card" id="aiAudioCard" style="display: none;">
+                    <div class="reb-card-header">
+                        <h3><i data-lucide="mic" class="icon-purple"></i> AI Voice Insights</h3>
+                    </div>
+                    <div class="reb-ai-modes">
+                        <button onclick="playAudio('quick')" class="reb-ai-btn">
+                            <i data-lucide="play-circle"></i>
+                            <span>Quick</span>
+                            <span class="ai-duration">2 min</span>
+                        </button>
+                        <button onclick="playAudio('detailed')" class="reb-ai-btn">
+                            <i data-lucide="play-circle"></i>
+                            <span>Detailed</span>
+                            <span class="ai-duration">10 min</span>
+                        </button>
+                        <button onclick="playAudio('advisor')" class="reb-ai-btn">
+                            <i data-lucide="play-circle"></i>
+                            <span>Advisor</span>
+                            <span class="ai-duration">15 min</span>
+                        </button>
+                    </div>
+                    <button onclick="stopAudio()" class="reb-stop-btn">
+                        <i data-lucide="square"></i>
+                        Stop Briefing
+                    </button>
+                </div>
+
+                <!-- Current Allocation Card -->
+                <div class="reb-card reb-allocation-card">
+                    <div class="reb-card-header">
+                        <h3>Current Portfolio Allocation</h3>
+                        <span class="reb-card-badge">by Asset Type</span>
+                    </div>
+                    <div class="reb-chart-container">
+                        <div class="reb-donut-wrapper">
                             <canvas id="allocationPieChart"></canvas>
-                            <div
-                                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
-                                <div
-                                    style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">
-                                    Current</div>
-                                <div style="font-size: 1rem; color: var(--text-main); font-weight: 700;">Portfolio</div>
+                            <div class="reb-donut-center">
+                                <span class="donut-label">Current</span>
+                                <span class="donut-value">Portfolio</span>
                             </div>
                         </div>
-                        <div id="pieLegend"
-                            style="margin-left: 2rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                            <!-- Legend items will be added here by JS -->
+                        <div id="pieLegend" class="reb-legend">
+                            <!-- Legend items populated by JS -->
                         </div>
                     </div>
                 </div>
 
-                <!-- AI Audio Insights -->
-                <div class="card ai-audio-card" id="aiAudioCard" style="display: none;">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3 style="margin: 0;"><i data-lucide="mic" style="color: var(--purple);"></i> AI Audio Insights
-                        </h3>
+                <!-- Optimization Plan Card -->
+                <div class="reb-card reb-optimization-card" id="optimizationPlanCard" style="display: none;">
+                    <div class="reb-card-header">
+                        <h3><i data-lucide="zap" class="icon-orange"></i> AI Optimized Rebalancing Plan</h3>
                     </div>
-                    <div class="audio-modes">
-                        <div class="audio-mode-item">
-                            <button onclick="playAudio('quick')" class="btn-audio"><i data-lucide="play-circle"></i>
-                                Quick</button>
-                            <span class="mode-desc">2 min • Critical action</span>
+                    <p class="reb-card-subtitle">Found weights that minimize Total Cost (Overlap + Concentration + Strategy Gaps)</p>
+                    <div id="optimizationActions" class="reb-optimization-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="reb-col-right">
+                <!-- Portfolio Analysis Card -->
+                <div class="reb-card reb-analysis-card">
+                    <div class="reb-card-header">
+                        <h3><i data-lucide="bar-chart-3" class="icon-blue"></i> Portfolio Analysis</h3>
+                    </div>
+
+                    <!-- Before/After Charts -->
+                    <div class="reb-before-after">
+                        <div class="reb-ba-item">
+                            <div class="reb-ba-chart">
+                                <canvas id="currentChart"></canvas>
+                                <div class="reb-ba-center">
+                                    <span class="ba-label">Equities</span>
+                                </div>
+                            </div>
+                            <span class="ba-title">Current</span>
                         </div>
-                        <div class="audio-mode-item">
-                            <button onclick="playAudio('detailed')" class="btn-audio"><i data-lucide="play-circle"></i>
-                                Detailed</button>
-                            <span class="mode-desc">10 min • Explanation</span>
-                        </div>
-                        <div class="audio-mode-item">
-                            <button onclick="playAudio('advisor')" class="btn-audio"><i data-lucide="play-circle"></i>
-                                Advisor</button>
-                            <span class="mode-desc">15 min • Full strategy</span>
+                        <i data-lucide="arrow-right" class="ba-arrow"></i>
+                        <div class="reb-ba-item">
+                            <div class="reb-ba-chart">
+                                <canvas id="targetChart"></canvas>
+                                <div class="reb-ba-center">
+                                    <span class="ba-label">Target</span>
+                                    <span class="ba-value">70%</span>
+                                </div>
+                            </div>
+                            <span class="ba-title">Target</span>
                         </div>
                     </div>
-                    <div class="audio-controls"
-                        style="margin-top: 1rem; border-top: 1px solid #f1f5f9; padding-top: 1rem; display: flex; justify-content: center;">
-                        <button onclick="stopAudio()" class="btn-audio btn-stop"
-                            style="background: #fee2e2; color: #ef4444; border: 1px solid #fecaca;">
-                            <i data-lucide="square"></i> Stop Briefing
+
+                    <!-- Stats Grid -->
+                    <div class="reb-stats-grid">
+                        <div class="reb-stat-item">
+                            <span class="reb-stat-dot purple"></span>
+                            <span class="reb-stat-label">Equities</span>
+                            <span class="reb-stat-value" id="statEquities">86%</span>
+                        </div>
+                        <div class="reb-stat-item">
+                            <span class="reb-stat-dot blue"></span>
+                            <span class="reb-stat-label">Commodities</span>
+                            <span class="reb-stat-value" id="statCommodities">10%</span>
+                        </div>
+                        <div class="reb-stat-item">
+                            <span class="reb-stat-dot light-blue"></span>
+                            <span class="reb-stat-label">Debt</span>
+                            <span class="reb-stat-value" id="statDebt">5%</span>
+                        </div>
+                        <div class="reb-stat-item">
+                            <span class="reb-stat-dot green"></span>
+                            <span class="reb-stat-label">Fixed Income</span>
+                            <span class="reb-stat-value" id="statFixedIncome">20%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rebalance Recommendations Table -->
+                <div class="reb-card reb-recommendations-card">
+                    <div class="reb-card-header">
+                        <h3><i data-lucide="list-checks" class="icon-green"></i> Rebalance Recommendations</h3>
+                        <span class="reb-client-badge" id="recClientName">John Smith</span>
+                    </div>
+                    <div class="reb-table-wrapper">
+                        <table class="reb-table">
+                            <thead>
+                                <tr>
+                                    <th>Action</th>
+                                    <th>Stock/Fund</th>
+                                    <th>Current</th>
+                                    <th>Target</th>
+                                    <th>Units</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recommendationsTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="reb-table-footer">
+                        <button class="reb-execute-btn" onclick="alert('Execute Rebalance clicked!')">
+                            <i data-lucide="zap"></i>
+                            Execute Rebalance
                         </button>
                     </div>
                 </div>
 
-                <!-- Rebalance Recommendations Text -->
-                <div class="card recommendations-text">
-                    <h3>Rebalance Recommendations</h3>
-                    <p>We've generated a list of trades to rebalance <strong>John Smith's</strong> portfolio to better
-                        align with the 5-finger strategy. The cart is ready for review.</p>
-                </div>
-
-                <!-- Optimized Rebalancing Plan (NEW) -->
-                <div class="card optimization-card" id="optimizationPlanCard" style="display: none;">
-                    <h3><i data-lucide="zap" style="color: #f59e0b;"></i> AI Optimized Rebalancing Plan</h3>
-                    <p class="card-subtitle">Found weights that minimize Total Cost (Overlap + Concentration + Strategy
-                        Gaps)</p>
-                    <div id="optimizationActions" class="optimization-actions-list">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Right Column -->
-            <div class="col-right">
-                <!-- Matrix -->
-                <div class="card matrix-card">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                        <h3 style="margin: 0;">Portfolio Overlap Matrix (Stock Level)</h3>
-                        <div class="matrix-legend">
-                            <span class="legend-chip red">>35%</span>
-                            <span class="legend-chip orange">20-35%</span>
-                            <span class="legend-chip yellow">10-20%</span>
-                            <span class="legend-chip green">
-                                <10%< /span>
+                <!-- Overlap Matrix -->
+                <div class="reb-card reb-matrix-card">
+                    <div class="reb-card-header">
+                        <h3><i data-lucide="grid-3x3" class="icon-red"></i> Portfolio Overlap Matrix</h3>
+                        <div class="reb-matrix-legend">
+                            <span class="matrix-legend-item red">&gt;35%</span>
+                            <span class="matrix-legend-item orange">20-35%</span>
+                            <span class="matrix-legend-item yellow">10-20%</span>
+                            <span class="matrix-legend-item green">&lt;10%</span>
                         </div>
                     </div>
-                    <div class="matrix-table-wrapper">
-                        <table class="matrix-table">
+                    <div class="reb-matrix-wrapper">
+                        <table class="reb-matrix-table">
                             <thead>
                                 <tr id="matrixHeaderRow">
-                                    <!-- Dynamic headers (Sr, Investment, 1, 2, 3...) -->
+                                    <!-- Dynamic headers -->
                                 </tr>
                             </thead>
                             <tbody id="matrixTableBody">
@@ -230,61 +273,6 @@
                         </table>
                     </div>
                 </div>
-
-
-                <!-- Portfolio Insights & Flags -->
-                <div class="card flags-card" id="flagsCard" style="display: none; border-left: 4px solid var(--red);">
-                    <h3><i data-lucide="alert-triangle" style="color: var(--red);"></i> Critical Insights & Risk Flags
-                    </h3>
-                    <div id="flagsList" class="flags-list">
-                        <!-- Populated by JS -->
-                    </div>
-                </div>
-
-                <!-- Rebalancing Summary -->
-                <div class="card rebalance-summary">
-                    <h3>Rebalancing Summary</h3>
-                    <div class="summary-charts">
-                        <div class="chart-wrapper" style="position: relative; width: 120px; height: 120px;">
-                            <canvas id="currentChart"></canvas>
-                            <div
-                                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
-                                <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 500;">Equities
-                                </div>
-                            </div>
-                        </div>
-                        <i data-lucide="arrow-right" class="arrow" style="color: var(--text-muted);"></i>
-                        <div class="chart-wrapper" style="position: relative; width: 120px; height: 120px;">
-                            <canvas id="targetChart"></canvas>
-                            <div
-                                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
-                                <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 500;">Target</div>
-                                <div style="font-size: 1rem; color: var(--text-main); font-weight: 700;">70%</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="summary-stats">
-                        <div class="stat-row">
-                            <span><span class="dot purple"></span> Equities</span> <strong>86%</strong>
-                            <span><span class="dot blue"></span> Commodities</span> <strong>10%</strong>
-                        </div>
-                        <div class="stat-row">
-                            <span><span class="dot light-blue"></span> Debt</span> <strong>5%</strong>
-                            <span><span class="dot light-blue"></span> Fixed Income</span> <strong>20%</strong>
-                        </div>
-                        <div class="stat-row">
-                            <span><span class="dot purple-light"></span> Alternatives</span> <strong>5%</strong>
-                            <span><span class="dot green-light"></span> Fixed Income</span> <strong>5%</strong>
-                        </div>
-                    </div>
-                    <div class="total-cost">
-                        <span>Total Rebalance Cost</span>
-                        <strong class="negative">-₹60,59,384</strong>
-                    </div>
-                    <button class="btn-primary full-width" onclick="alert('Execute Rebalance clicked!')">Execute
-                        Rebalance</button>
-                </div>
-
             </div>
         </div>
     </main>
