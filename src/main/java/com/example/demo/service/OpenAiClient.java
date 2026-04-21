@@ -308,24 +308,24 @@ public class OpenAiClient {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiKey);
 
-        System.out.println("[OpenAiClient] Requested Language for AI Insights: " + language);
+        System.out.println("[OpenAiClient] Generating Tri-Language AI Insights (English + Tamil + Hindi)");
 
-        String systemInstruction = String.format(
-            "You are a professional financial advisor. You MUST generate your response strictly in %s language using the native script. " +
-            "Use a natural, spoken tone suitable for a 1-on-1 advisor briefing. " +
-            "Do not use English words. Translate all technical terms like 'overlap' and 'rebalancing' into natural-sounding %s terms.",
-            language, language
-        );
+        String systemInstruction = 
+            "You are a professional financial advisor. You must generate portfolio insights in THREE languages: English, Tamil, and Hindi. " +
+            "For Tamil and Hindi, use a natural, spoken tone suitable for a 1-on-1 advisor briefing. Use the native scripts (Tamil and Devanagari). " +
+            "DO NOT just transliterate English words. Translate technical concepts like 'overlap' as 'ஒன்றுடன் ஒன்று இணைதல்' (Tamil) or 'ओवरलैप' (Hindi - if commonly used) and explain them naturally. " +
+            "Fund names can be kept as-is or transliterated, but the overall message MUST be in the target language script. " +
+            "Return ONLY a valid JSON object with these exact keys: " +
+            "'quick', 'quick_ta', 'quick_hin', 'detailed', 'detailed_ta', 'detailed_hin', 'advisor', 'advisor_ta', 'advisor_hin'.";
 
         String userPrompt = String.format(
-            "Translate and expand this analysis into a natural spoken briefing in %s script:\n\n" +
-            "Analysis Data: '%s'\n\n" +
-            "Please generate 3 detailed versions:\n" +
-            "1. quick: A 2-minute natural summary.\n" +
-            "2. detailed: A 10-minute masterclass explanation.\n" +
-            "3. advisor: A 15-minute senior advisor briefing.\n\n" +
-            "Return ONLY a valid JSON object with keys 'quick', 'detailed', and 'advisor'.",
-            language, summary
+            "Based on this analysis summary, generate 3 versions of insights (quick, detailed, advisor) in English, Tamil, and Hindi:\n\n" +
+            "Analysis Summary: '%s'\n\n" +
+            "1. quick: A 2-minute summary.\n" +
+            "2. detailed: A 10-minute masterclass.\n" +
+            "3. advisor: A 15-minute briefing.\n\n" +
+            "Ensure the Tamil and Hindi versions are fully translated and natural, not just a few words.",
+            summary
         );
 
         ArrayNode messages = mapper.createArrayNode();
@@ -342,6 +342,7 @@ public class OpenAiClient {
         ObjectNode requestBody = mapper.createObjectNode();
         requestBody.put("model", "gpt-3.5-turbo");
         requestBody.put("temperature", 0.7);
+        requestBody.put("max_tokens", 2500); // Ensure enough space for all 9 insights
         requestBody.set("messages", messages);
 
         try {
@@ -355,9 +356,20 @@ public class OpenAiClient {
             if (m.find()) {
                 JsonNode result = mapper.readTree(m.group());
                 Map<String, String> insights = new HashMap<>();
-                insights.put("quick", result.path("quick").asText());
-                insights.put("detailed", result.path("detailed").asText());
-                insights.put("advisor", result.path("advisor").asText());
+                
+                // Populate all keys
+                String[] suffixes = {"", "_ta", "_hin"};
+                String[] types = {"quick", "detailed", "advisor"};
+                
+                for (String type : types) {
+                    for (String suffix : suffixes) {
+                        String key = type + suffix;
+                        if (result.has(key)) {
+                            insights.put(key, result.path(key).asText());
+                        }
+                    }
+                }
+                
                 return insights;
             }
         } catch (Exception e) {
@@ -365,12 +377,21 @@ public class OpenAiClient {
         }
 
         Map<String, String> fallback = new HashMap<>();
-        String intro = language.equals("Tamil") ? "வணக்கம். உங்கள் போர்ட்ஃபோலியோ பகுப்பாய்வு இதோ. " : 
-                       (language.equals("Hindi") ? "नमस्ते. यहाँ आपके पोर्टफोलियो का विश्लेषण है. " : "Hello. Here is your portfolio analysis. ");
+        // Quick versions
+        fallback.put("quick", "Analysis complete. " + summary);
+        fallback.put("quick_ta", "பகுப்பாய்வு முடிந்தது. " + summary);
+        fallback.put("quick_hin", "विश्लेषण पूरा हुआ। " + summary);
         
-        fallback.put("quick", intro + "The analysis is complete. " + summary);
-        fallback.put("detailed", intro + "We have performed a deep-dive analysis. " + summary + " Please review the rebalancing plan to optimize your diversification.");
-        fallback.put("advisor", intro + "Welcome to your senior advisor briefing. " + summary + " Our 5-Finger strategy suggests these trades to align with your " + language + " preferences and risk profile.");
+        // Detailed versions
+        fallback.put("detailed", "We have performed a deep-dive analysis. " + summary);
+        fallback.put("detailed_ta", "நாங்கள் ஆழமான பகுப்பாய்வைச் செய்துள்ளோம். " + summary);
+        fallback.put("detailed_hin", "हमने एक विस्तृत विश्लेषण किया है। " + summary);
+        
+        // Advisor versions
+        fallback.put("advisor", "Welcome to your senior advisor briefing. " + summary);
+        fallback.put("advisor_ta", "உங்கள் மூத்த ஆலோசகர் விளக்கத்திற்கு வரவேற்கிறோம். " + summary);
+        fallback.put("advisor_hin", "आपके वरिष्ठ सलाहकार ब्रीफिंग में आपका स्वागत है। " + summary);
+        
         return fallback;
     }
 }

@@ -322,19 +322,31 @@ function renderAgentTrace(trace) {
 }
 
 function playAudio(mode) {
-    if (!globalAiInsights || !globalAiInsights[mode]) {
-        console.warn('No AI insight available for mode:', mode);
+    if (!globalAiInsights) {
+        console.warn('No AI insights available yet.');
+        return;
+    }
+
+    const language = document.getElementById('languageSelectTop').value;
+    console.log('[Audio] Current Insights:', globalAiInsights);
+    console.log('[Audio] Requested Mode:', mode, 'with language:', language);
+
+    let modeWithLang = mode;
+    if (language === 'Tamil') modeWithLang += '_ta';
+    else if (language === 'Hindi') modeWithLang += '_hin';
+
+    const text = globalAiInsights[modeWithLang] || globalAiInsights[mode];
+    if (!text) {
+        console.warn('No AI insight available for mode:', modeWithLang);
         return;
     }
 
     // Cancel any ongoing speech
     window.speechSynthesis.cancel();
 
-    const text = globalAiInsights[mode];
     const utterance = new SpeechSynthesisUtterance(text);
     
     // Attempt to find a suitable voice based on language
-    const language = document.getElementById('languageSelect').value;
     const voices = window.speechSynthesis.getVoices();
     
     if (language === 'Tamil') {

@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>5-Finger Strategy Portfolio Analysis & Rebalancing Tool</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=1.1">
     <!-- Chart.js for donut charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Lucide icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Cache-busting app.js -->
+    <script src="js/app.js?v=1.1"></script>
 </head>
 <body>
     <nav class="top-nav">
@@ -46,10 +48,10 @@
                 <p>Build a tool that takes a client portfolio, analyses overlap across holdings, maps it to the 5-finger framework, identifies gaps/over-concentration, and generates a cart with rebalancing recommendations with reasoning.</p>
             </div>
             <div class="banner-action">
-                <div class="client-selector" style="display: flex; gap: 0.5rem; background: white; padding: 0.25rem 0.5rem; border-radius: 8px;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem; border-right: 1px solid #eee; padding-right: 0.5rem;">
-                        <i data-lucide="search" style="color: #94a3b8; width: 16px;"></i>
-                        <select id="clientSelect" style="border: none; outline: none; font-size: 0.9rem; color: #1e293b; background: transparent;">
+                <div class="client-selector" style="display: flex; gap: 0.5rem; background: #f8fafc; padding: 0.5rem; border-radius: 12px; border: 2px solid #3b82f6;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; border-right: 1px solid #e2e8f0; padding-right: 0.8rem;">
+                        <i data-lucide="user" style="color: #3b82f6; width: 18px;"></i>
+                        <select id="clientSelect" style="border: none; outline: none; font-size: 1rem; font-weight: 600; color: #1e293b; background: transparent;">
                             <option value="U1001">U1001 - John Smith</option>
                             <option value="U1002">U1002 - Emma Davis</option>
                             <option value="U1003">U1003 - Michael Chen</option>
@@ -57,16 +59,16 @@
                             <option value="U1005">U1005 - Liam Wilson</option>
                         </select>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; padding-left: 0.25rem;">
-                        <i data-lucide="languages" style="color: #94a3b8; width: 16px;"></i>
-                        <select id="languageSelectTop" style="border: none; outline: none; font-size: 0.9rem; color: #1e293b; background: transparent;">
-                            <option value="English">English</option>
-                            <option value="Tamil">Tamil</option>
-                            <option value="Hindi">Hindi</option>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; padding-left: 0.5rem;">
+                        <i data-lucide="languages" style="color: #8b5cf6; width: 18px;"></i>
+                        <select id="languageSelectTop" style="border: none; outline: none; font-size: 1rem; font-weight: 700; color: #8b5cf6; background: transparent; cursor: pointer;">
+                            <option value="English">English Audio</option>
+                            <option value="Tamil">Tamil (தமிழ்)</option>
+                            <option value="Hindi">Hindi (हिन्दी)</option>
                         </select>
                     </div>
                 </div>
-                <button id="analyzeBtn" class="btn-primary" onclick="window.analyzePortfolio()">Analyze Portfolio</button>
+                <button id="analyzeBtn" class="btn-primary" onclick="window.analyzePortfolio()" style="padding: 0.8rem 2rem; font-size: 1rem; font-weight: 700;">Analyze & Generate Voice</button>
             </div>
         </section>
 
