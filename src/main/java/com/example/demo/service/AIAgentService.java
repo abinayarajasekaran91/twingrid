@@ -61,14 +61,14 @@ public class AIAgentService {
         ClientPortfolio portfolio = optionalPortfolio.get();
         response.setStatus("SUCCESS");
         response.setMessage("AI Agent analysis complete — powered by OpenAI GPT with 5-Finger Strategy");
-        response.setClientName("Abinaya");
+        
+        // Fetch dynamic investor name using PAN
+        String pan = request.getPan() != null ? request.getPan() : "DZZPA6521D";
+        response.setClientName(portfolioDao.getInvestorName(pan));
+        
         response.setRiskLevel("Moderate Risk");
 
-        // Investment Details
-        response.setInvestedAmount(72000.0);
-        response.setCurrentValue(78500.0);
-        response.setGain(6500.0);
-        response.setGainPercent(9.03);
+        // Hardcoded fallbacks removed - using dynamic values below
 
         // Hardcoded Allocations based on your 72k portfolio
         response.setCurrentAllocations(Arrays.asList(86, 5, 5)); // Equities, Debt, Alternatives
@@ -79,7 +79,7 @@ public class AIAgentService {
 
         // ── STEP 3: Advanced Overlap Matrix Calculation (Logic from User) ────────
         // Use real MSSQL data if PAN is provided, else fallback to mock/seeded data
-        String pan = request.getPan() != null ? request.getPan() : "DZZPA6521D";
+        // String pan = request.getPan() != null ? request.getPan() : "DZZPA6521D"; // Already defined above
 
         List<Map<String, Object>> rawHoldings = portfolioDao.getFundStockHoldings(pan);
         List<Map<String, Object>> clientFunds = portfolioDao.getClientFunds(pan);
@@ -205,21 +205,7 @@ public class AIAgentService {
             }
         }
 
-        List<Map<String, Object>> stockOverlaps = new ArrayList<>();
-        for (String stock : stockFrequency.keySet()) {
-            if (stockFrequency.get(stock) > 1) {
-                Map<String, Object> so = new HashMap<>();
-                so.put("stock", stock);
-                so.put("fundCount", stockFrequency.get(stock));
-                so.put("exposure", Math.round(totalExposure.get(stock) * 100.0) / 100.0);
-                stockOverlaps.add(so);
-
-                if (stockFrequency.get(stock) > 3)
-                    flags.add("🚨 Stock concentration risk: " + stock + " in " + stockFrequency.get(stock) + " funds");
-                if (totalExposure.get(stock) > 8.0)
-                    flags.add("🚨 Overexposed to " + stock + " (" + so.get("exposure") + "%)");
-            }
-        }
+        // stockOverlaps removed as requested
 
         // Aggregate Sectors & MCaps
         Map<String, Double> sectorMetrics = new HashMap<>();
@@ -234,7 +220,7 @@ public class AIAgentService {
                         Math.round((mcapMetrics.getOrDefault(k, 0.0) + (v * fw)) * 100.0) / 100.0));
         }
 
-        response.setStockOverlap(stockOverlaps);
+        // response.setStockOverlap(stockOverlaps); removed
         response.setSectorOverlap(sectorMetrics);
         response.setMarketCapOverlap(mcapMetrics);
         response.setFlags(flags);
@@ -310,18 +296,18 @@ public class AIAgentService {
         // ────────────────
         String lang = request.getLanguage() != null ? request.getLanguage() : "English";
 
-        // Calculate gain values for the insight
-        double invested = portfolio.getInvestedAmount() != null ? portfolio.getInvestedAmount() : 72000.0;
-        double current = portfolio.getCurrentValue() != null ? portfolio.getCurrentValue() : 78450.0;
-        double insightGain = current - invested;
-        double insightGainPercent = (insightGain / invested) * 100.0;
+        // Use the dynamic values fetched from the DAO (already calculated in Step 3)
+        double invested = investedAmount;
+        double current = currentValue;
+        double insightGain = gain;
+        double insightGainPercent = gainPercent;
 
         // Pass RICH raw data points
         String rawDataPoints = String.format(
                 "CLIENT: %s | RISK: %s | INVESTED: ₹%.2f | CURRENT: ₹%.2f | GAIN: ₹%.2f (%.2f%%) | " +
                         "OVERLAP: %s to %s | DIVERSIFICATION: %s to %s | REBALANCE COST: %s | " +
                         "TOP REBALANCING TRADES: %s",
-                portfolio.getClientName(),
+                response.getClientName(),
                 portfolio.getRiskLevel(),
                 invested, current, insightGain, insightGainPercent,
                 Map.class.cast(response.getPortfolioScores().get("before")).get("overlap"),

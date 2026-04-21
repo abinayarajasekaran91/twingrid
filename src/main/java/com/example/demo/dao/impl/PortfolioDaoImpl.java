@@ -97,4 +97,15 @@ public class PortfolioDaoImpl implements PortfolioDao {
                 "ORDER BY SCM.ASSET_TYPE";
         return jdbcTemplate.queryForList(sql, pan);
     }
+    @Override
+    public String getInvestorName(String pan) {
+        String sql = "SELECT InvestorName FROM InvestorBasicDetail WHERE TRIM(PAN) = TRIM(?)";
+        try {
+            String name = jdbcTemplate.queryForObject(sql, String.class, pan);
+            if (name != null && !name.trim().isEmpty()) return name.trim();
+        } catch (Exception e) {
+            System.err.println("[Database Error] Failed to fetch InvestorName for PAN " + pan + ": " + e.getMessage());
+        }
+        return "Valued Investor"; // Fallback
+    }
 }

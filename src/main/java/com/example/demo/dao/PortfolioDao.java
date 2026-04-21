@@ -8,4 +8,5 @@ public interface PortfolioDao {
     List<Map<String, Object>> getClientFunds(String pan);
     Map<String, Object> getPortfolioPerformance(String pan);
     List<Map<String, Object>> getAssetTypeAllocations(String pan);
+    String getInvestorName(String pan);
 }
