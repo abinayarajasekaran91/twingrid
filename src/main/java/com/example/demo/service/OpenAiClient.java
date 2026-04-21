@@ -219,7 +219,10 @@ public class OpenAiClient {
                     for (JsonNode toolCall : toolCalls) {
                         String toolCallId = toolCall.path("id").asText();
                         String toolName = toolCall.path("function").path("name").asText();
-                        JsonNode toolArgs = mapper.readTree(toolCall.path("function").path("arguments").asText());
+                        String argsStr = toolCall.path("function").path("arguments").asText();
+                        JsonNode toolArgs = (argsStr != null && !argsStr.isEmpty())
+                            ? mapper.readTree(argsStr)
+                            : mapper.createObjectNode();
 
                         // ── Trace: OpenAI decided to call a tool ──────────────
                         addTrace(trace, "tool-call",
@@ -301,5 +304,97 @@ public class OpenAiClient {
         step.put("detail", detail);
         trace.add(step);
         System.out.println("[AI Agent] " + title + " | " + detail);
+    }
+
+    public Map<String, String> generateAudioInsights(String summary, String language) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(apiKey);
+
+        System.out.println("[OpenAiClient] Generating Tri-Language AI Insights (English + Tamil + Hindi)");
+
+        String systemInstruction = 
+            "You are a professional financial advisor. You must generate portfolio insights in THREE languages: English, Tamil, and Hindi. " +
+            "For Tamil and Hindi, use a natural, spoken tone suitable for a 1-on-1 advisor briefing. Use the native scripts (Tamil and Devanagari). " +
+            "DO NOT just transliterate English words. Translate technical concepts like 'overlap' as 'ஒன்றுடன் ஒன்று இணைதல்' (Tamil) or 'ओवरलैप' (Hindi - if commonly used) and explain them naturally. " +
+            "Fund names can be kept as-is or transliterated, but the overall message MUST be in the target language script. " +
+            "Return ONLY a valid JSON object with these exact keys: " +
+            "'quick', 'quick_ta', 'quick_hin', 'detailed', 'detailed_ta', 'detailed_hin', 'advisor', 'advisor_ta', 'advisor_hin'.";
+
+        String userPrompt = String.format(
+            "Based on this analysis summary, generate 3 versions of insights (quick, detailed, advisor) in English, Tamil, and Hindi:\n\n" +
+            "Analysis Summary: '%s'\n\n" +
+            "1. quick: A 2-minute summary.\n" +
+            "2. detailed: A 10-minute masterclass.\n" +
+            "3. advisor: A 15-minute briefing.\n\n" +
+            "Ensure the Tamil and Hindi versions are fully translated and natural, not just a few words.",
+            summary
+        );
+
+        ArrayNode messages = mapper.createArrayNode();
+        ObjectNode sysMsg = mapper.createObjectNode();
+        sysMsg.put("role", "system");
+        sysMsg.put("content", systemInstruction);
+        messages.add(sysMsg);
+
+        ObjectNode msg = mapper.createObjectNode();
+        msg.put("role", "user");
+        msg.put("content", userPrompt);
+        messages.add(msg);
+
+        ObjectNode requestBody = mapper.createObjectNode();
+        requestBody.put("model", "gpt-3.5-turbo");
+        requestBody.put("temperature", 0.7);
+        requestBody.put("max_tokens", 2500); // Ensure enough space for all 9 insights
+        requestBody.set("messages", messages);
+
+        try {
+            HttpEntity<String> request = new HttpEntity<>(mapper.writeValueAsString(requestBody), headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, request, String.class);
+            JsonNode root = mapper.readTree(response.getBody());
+            String content = root.path("choices").get(0).path("message").path("content").asText();
+            
+            // Extract JSON from response
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\{.*\\}", java.util.regex.Pattern.DOTALL).matcher(content);
+            if (m.find()) {
+                JsonNode result = mapper.readTree(m.group());
+                Map<String, String> insights = new HashMap<>();
+                
+                // Populate all keys
+                String[] suffixes = {"", "_ta", "_hin"};
+                String[] types = {"quick", "detailed", "advisor"};
+                
+                for (String type : types) {
+                    for (String suffix : suffixes) {
+                        String key = type + suffix;
+                        if (result.has(key)) {
+                            insights.put(key, result.path(key).asText());
+                        }
+                    }
+                }
+                
+                return insights;
+            }
+        } catch (Exception e) {
+            System.err.println("Error generating AI insights: " + e.getMessage());
+        }
+
+        Map<String, String> fallback = new HashMap<>();
+        // Quick versions
+        fallback.put("quick", "Analysis complete. " + summary);
+        fallback.put("quick_ta", "பகுப்பாய்வு முடிந்தது. " + summary);
+        fallback.put("quick_hin", "विश्लेषण पूरा हुआ। " + summary);
+        
+        // Detailed versions
+        fallback.put("detailed", "We have performed a deep-dive analysis. " + summary);
+        fallback.put("detailed_ta", "நாங்கள் ஆழமான பகுப்பாய்வைச் செய்துள்ளோம். " + summary);
+        fallback.put("detailed_hin", "हमने एक विस्तृत विश्लेषण किया है। " + summary);
+        
+        // Advisor versions
+        fallback.put("advisor", "Welcome to your senior advisor briefing. " + summary);
+        fallback.put("advisor_ta", "உங்கள் மூத்த ஆலோசகர் விளக்கத்திற்கு வரவேற்கிறோம். " + summary);
+        fallback.put("advisor_hin", "आपके वरिष्ठ सलाहकार ब्रीफिंग में आपका स्वागत है। " + summary);
+        
+        return fallback;
     }
 }

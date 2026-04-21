@@ -1,4 +1,5 @@
-let alignChart, currentChart, targetChart;
+let allocationPieChart, currentChart, targetChart;
+let globalAiInsights = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     initCharts();
@@ -12,15 +13,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initCharts() {
-    // 5-Finger Strategy Alignment Chart
-    const alignCtx = document.getElementById('alignmentChart').getContext('2d');
-    alignChart = new Chart(alignCtx, {
+
+    // Current Allocation Pie Chart (by Asset Type)
+    const pieCtx = document.getElementById('allocationPieChart').getContext('2d');
+    allocationPieChart = new Chart(pieCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Equities', 'Commodities', 'Debt'],
+            labels: [],
             datasets: [{
-                data: [85, 10, 5],
-                backgroundColor: ['#8b5cf6', '#3b82f6', '#f59e0b'],
+                data: [],
+                backgroundColor: ['#8b5cf6', '#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4'],
                 borderWidth: 0,
                 cutout: '70%'
             }]
@@ -29,8 +31,7 @@ function initCharts() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false }
+                legend: { display: false }
             }
         }
     });
@@ -41,7 +42,7 @@ function initCharts() {
         type: 'doughnut',
         data: {
             datasets: [{
-                data: [86, 10, 5],
+                data: [85, 10, 5],
                 backgroundColor: ['#8b5cf6', '#3b82f6', '#f59e0b'],
                 borderWidth: 0,
                 cutout: '80%'
@@ -99,18 +100,52 @@ function updateUI(data) {
                 el.className = 'negative positive text-green';
                 el.style.color = 'var(--green)';
             } else {
-                el.className = 'negative text-red';
+                el.className = 'negative';
                 el.style.color = 'var(--red)';
             }
         }
     });
 
+    // Update Performance Metrics
+    if (data.currentValue !== undefined) {
+        document.getElementById('performanceMetrics').style.display = 'flex';
+        document.getElementById('investedAmount').textContent = '₹' + data.investedAmount.toLocaleString();
+        document.getElementById('currentValue').textContent = '₹' + data.currentValue.toLocaleString();
+        
+        const gainVal = document.getElementById('gainVal');
+        const gainPercent = document.getElementById('gainPercent');
+        
+        gainVal.textContent = (data.gain >= 0 ? '+₹' : '-₹') + Math.abs(data.gain).toLocaleString();
+        gainPercent.textContent = (data.gainPercent >= 0 ? '+' : '') + data.gainPercent.toFixed(2) + '%';
+        
+        gainVal.className = 'perf-val ' + (data.gain >= 0 ? 'text-green' : 'text-red');
+        gainPercent.className = 'perf-badge ' + (data.gain >= 0 ? 'positive' : 'negative');
+    }
 
     // Update Charts Data
-    if (data.currentAllocations) {
-        alignChart.data.datasets[0].data = data.currentAllocations;
-        alignChart.update();
+    if (data.assetTypeAllocations) {
+        const labels = data.assetTypeAllocations.map(a => a.assetType);
+        const values = data.assetTypeAllocations.map(a => a.allocationPercent);
         
+        allocationPieChart.data.labels = labels;
+        allocationPieChart.data.datasets[0].data = values;
+        allocationPieChart.update();
+
+        // Update Custom Legend
+        const pieLegend = document.getElementById('pieLegend');
+        if (pieLegend) {
+            const colors = allocationPieChart.data.datasets[0].backgroundColor;
+            pieLegend.innerHTML = data.assetTypeAllocations.map((a, i) => `
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
+                    <span style="width: 12px; height: 12px; border-radius: 50%; background: ${colors[i % colors.length]};"></span>
+                    <span style="font-weight: 600; color: var(--text-main);">${a.assetType}</span>
+                    <span style="color: var(--text-muted);">${a.allocationPercent}%</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    if (data.currentAllocations) {
         currentChart.data.datasets[0].data = data.currentAllocations;
         currentChart.update();
     }
@@ -119,41 +154,30 @@ function updateUI(data) {
         targetChart.update();
     }
 
-
-    // Update Flags (NEW)
-    if (data.flags && data.flags.length > 0) {
-        const flagsCard = document.getElementById('flagsCard');
-        const flagsList = document.getElementById('flagsList');
-        if (flagsCard && flagsList) {
-            flagsCard.style.display = 'block';
-            flagsList.innerHTML = data.flags.map(f => `<div>${f}</div>`).join('');
-        }
+    // Update Scores Summary
+    const scoresBar = document.getElementById('portfolioScores');
+    if (data.portfolioScores && scoresBar) {
+        scoresBar.style.display = 'flex';
+        document.getElementById('beforeOverlap').textContent = data.portfolioScores.before.overlap + '%';
+        document.getElementById('afterOverlap').textContent = data.portfolioScores.after.overlap + '%';
+        document.getElementById('beforeDiversification').textContent = data.portfolioScores.before.diversification;
+        document.getElementById('afterDiversification').textContent = data.portfolioScores.after.diversification;
     }
 
-    // Update Portfolio Scores (NEW)
-    if (data.portfolioScores) {
-        const scoresEl = document.getElementById('portfolioScores');
-        if (scoresEl) {
-            scoresEl.style.display = 'flex';
-            document.getElementById('beforeOverlap').textContent = data.portfolioScores.before.overlapScore + '%';
-            document.getElementById('afterOverlap').textContent = data.portfolioScores.after.overlapScore + '%';
-            document.getElementById('beforeDiversification').textContent = data.portfolioScores.before.diversificationScore;
-            document.getElementById('afterDiversification').textContent = data.portfolioScores.after.diversificationScore;
-        }
-    }
-
-    // Update Optimized Actions (NEW)
-    if (data.optimizedActions && data.optimizedActions.length > 0) {
-        const optCard = document.getElementById('optimizationPlanCard');
-        const optList = document.getElementById('optimizationActions');
-        if (optCard && optList) {
-            optCard.style.display = 'block';
-            optList.innerHTML = data.optimizedActions.map(action => `
+    // Render Optimized Plan
+    if (data.optimizedActions) {
+        const planCard = document.getElementById('optimizationPlanCard');
+        const actionsList = document.getElementById('optimizationActions');
+        if (planCard && actionsList) {
+            planCard.style.display = 'block';
+            actionsList.innerHTML = data.optimizedActions.map(action => `
                 <div class="opt-action-item">
                     <div class="opt-action-header">
-                        <span class="opt-fund-name">${action.fund}</span>
-                        <span class="badge-${action.action === 'INCREASE' ? 'green' : 'red'}">${action.action}</span>
-                        <span class="opt-change-text">${action.from}% <i data-lucide="arrow-right" style="width:12px;"></i> ${action.to}%</span>
+                        <span class="opt-fund-name">${action.name}</span>
+                        <span class="${action.action === 'increase' ? 'badge-green' : 'badge-red'}">${action.action.toUpperCase()}</span>
+                        <span class="opt-change-text ${action.action === 'increase' ? 'text-green' : 'text-red'}">
+                            ${action.change}
+                        </span>
                     </div>
                     <div class="opt-action-reason">${action.reason}</div>
                 </div>
@@ -161,22 +185,16 @@ function updateUI(data) {
         }
     }
 
-    // Update Performance Metrics (NEW)
-    if (data.currentValue !== undefined) {
-        const perfEl = document.getElementById('performanceMetrics');
-        if (perfEl) {
-            perfEl.style.display = 'flex';
-            document.getElementById('investedAmount').textContent = formatCurrency(data.investedAmount);
-            document.getElementById('currentValue').textContent = formatCurrency(data.currentValue);
-            document.getElementById('gainVal').textContent = formatCurrency(data.gain);
-            
-            const gpEl = document.getElementById('gainPercent');
-            gpEl.textContent = (data.gainPercent >= 0 ? '+' : '') + data.gainPercent.toFixed(2) + '%';
-            gpEl.className = 'perf-badge ' + (data.gainPercent >= 0 ? 'positive' : 'negative');
-        }
+    // Populate Flags
+    const flagsCard = document.getElementById('flagsCard');
+    const flagsList = document.getElementById('flagsList');
+    if (data.flags && data.flags.length > 0 && flagsCard && flagsList) {
+        flagsCard.style.display = 'block';
+        flagsList.innerHTML = data.flags.map(f => `<div>${f}</div>`).join('');
+    } else if (flagsCard) {
+        flagsCard.style.display = 'none';
     }
 
-    // Update Agent Trace
     if (data.agentTrace) {
         renderAgentTrace(data.agentTrace);
     }
@@ -187,10 +205,12 @@ function updateUI(data) {
         renderMatrix('matrixHeaderRow', 'matrixTableBody', data.matrix);
     }
 
-    // Update Market Cap Matrix
-    if (data.marketCapMatrix && data.marketCapMatrix.length > 0) {
-        renderMatrix('mcapMatrixHeaderRow', 'mcapMatrixTableBody', data.marketCapMatrix);
+    // Update AI Audio Insights
+    if (data.aiInsights) {
+        globalAiInsights = data.aiInsights;
+        document.getElementById('aiAudioCard').style.display = 'block';
     }
+
 }
 
 function renderMatrix(headerId, bodyId, matrixData) {
@@ -243,6 +263,9 @@ function renderMatrix(headerId, bodyId, matrixData) {
 async function analyzePortfolio() {
     const btn = document.getElementById('analyzeBtn');
     const clientId = document.getElementById('clientSelect').value;
+    const language = document.getElementById('languageSelectTop').value;
+    
+    console.log(`[Frontend] Analyzing portfolio for Client: ${clientId}, Language: ${language}`);
     
     if(btn) {
         btn.textContent = 'Analyzing...';
@@ -255,7 +278,7 @@ async function analyzePortfolio() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ clientId })
+            body: JSON.stringify({ clientId, language })
         });
         
         if (response.ok) {
@@ -282,56 +305,76 @@ function renderAgentTrace(trace) {
     card.style.display = 'block';
     stepsEl.innerHTML = '';
 
-    // Render each trace step with a staggered delay so it looks "live"
     trace.forEach((step, index) => {
         setTimeout(() => {
-            const div = document.createElement('div');
-            div.className = `trace-step ${step.type}`;
-            div.style.animationDelay = `0ms`; // already staggered by setTimeout
-            div.innerHTML = `
+            const stepEl = document.createElement('div');
+            stepEl.className = `trace-step ${step.type}`;
+            stepEl.style.animationDelay = `0ms`;
+            stepEl.innerHTML = `
                 <div class="trace-step-content">
                     <div class="trace-step-title">${step.title}</div>
                     <div class="trace-step-detail">${step.detail}</div>
                 </div>
             `;
-            stepsEl.appendChild(div);
-        }, index * 200); // 200ms stagger between each step
+            stepsEl.appendChild(stepEl);
+        }, index * 200);
     });
-
-    if (window.lucide) lucide.createIcons();
 }
 
-function toggleCartItem(btn, action) {
-    if (action === 'none') return;
+function playAudio(mode) {
+    if (!globalAiInsights) {
+        console.warn('No AI insights available yet.');
+        return;
+    }
+
+    const language = document.getElementById('languageSelectTop').value;
+    console.log('[Audio] Current Insights:', globalAiInsights);
+    console.log('[Audio] Requested Mode:', mode, 'with language:', language);
+
+    let modeWithLang = mode;
+    if (language === 'Tamil') modeWithLang += '_ta';
+    else if (language === 'Hindi') modeWithLang += '_hin';
+
+    const text = globalAiInsights[modeWithLang] || globalAiInsights[mode];
+    if (!text) {
+        console.warn('No AI insight available for mode:', modeWithLang);
+        return;
+    }
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
     
-    const span = btn.querySelector('span');
-    const icon = btn.querySelector('i');
+    // Attempt to find a suitable voice based on language
+    const voices = window.speechSynthesis.getVoices();
     
-    if (btn.classList.contains('active')) {
-        // Revert
-        btn.classList.remove('active');
-        btn.style.backgroundColor = 'transparent';
-        btn.style.color = action === 'remove' ? 'var(--red)' : 'var(--purple)';
-        span.textContent = action === 'remove' ? 'Remove Cart' : 'Add to Cart';
-        icon.setAttribute('data-lucide', action === 'remove' ? 'minus' : 'plus');
+    if (language === 'Tamil') {
+        utterance.lang = 'ta-IN';
+        // Try to find a Tamil voice, fallback to any Indian voice
+        utterance.voice = voices.find(v => v.lang === 'ta-IN') || voices.find(v => v.lang.startsWith('ta')) || voices.find(v => v.lang.includes('India'));
+    } else if (language === 'Hindi') {
+        utterance.lang = 'hi-IN';
+        utterance.voice = voices.find(v => v.lang === 'hi-IN') || voices.find(v => v.lang.startsWith('hi')) || voices.find(v => v.lang.includes('India'));
     } else {
-        // Apply
-        btn.classList.add('active');
-        btn.style.backgroundColor = action === 'remove' ? 'var(--red)' : 'var(--purple)';
-        btn.style.color = 'white';
-        span.textContent = action === 'remove' ? 'Removed' : 'Added';
-        icon.setAttribute('data-lucide', 'check');
+        utterance.lang = 'en-US';
+        utterance.voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
     }
+
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
     
-    if (window.lucide) {
-        lucide.createIcons();
-    }
+    // Some browsers need a tiny delay to reset properly
+    setTimeout(() => {
+        window.speechSynthesis.speak(utterance);
+    }, 50);
 }
 
-function formatCurrency(val) {
-    return new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        maximumFractionDigits: 0
-    }).format(val);
+function stopAudio() {
+    window.speechSynthesis.cancel();
 }
+
+// Global expose
+window.analyzePortfolio = analyzePortfolio;
+window.playAudio = playAudio;
+window.stopAudio = stopAudio;

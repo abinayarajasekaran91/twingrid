@@ -734,3 +734,58 @@ th {
 }
 .perf-badge.positive { background: var(--green-bg); color: var(--green); }
 .perf-badge.negative { background: #fee2e2; color: var(--red); }
+
+/* AI Audio Insights */
+.ai-audio-card {
+    border-left: 4px solid var(--purple);
+    background: linear-gradient(to right, #fdfbff, #ffffff);
+}
+.lang-select {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-main);
+    outline: none;
+    cursor: pointer;
+}
+.audio-modes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+.audio-mode-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+.btn-audio {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 0.6rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-audio:hover {
+    border-color: var(--purple);
+    color: var(--purple);
+    background: var(--purple-bg);
+    transform: translateY(-2px);
+}
+.btn-audio i {
+    width: 18px;
+    height: 18px;
+}
+.mode-desc {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-align: center;
+}
