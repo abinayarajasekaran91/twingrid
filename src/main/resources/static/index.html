@@ -153,10 +153,28 @@
                             <span class="mode-desc">15 min • Full strategy</span>
                         </div>
                     </div>
-                    <div class="audio-controls" style="margin-top: 1rem; border-top: 1px solid #f1f5f9; padding-top: 1rem; display: flex; justify-content: center;">
-                        <button onclick="stopAudio()" class="btn-audio btn-stop" style="background: #fee2e2; color: #ef4444; border: 1px solid #fecaca;">
+                    <div class="audio-controls" style="margin-top: 1rem; border-top: 1px solid #f1f5f9; padding-top: 1rem; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+                        <button onclick="stopAudio()" class="btn-audio btn-stop" style="background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; width: 100%;">
                             <i data-lucide="square"></i> Stop Briefing
                         </button>
+                        
+                        <div style="width: 100%; margin-top: 0.5rem; padding: 1rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                            <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <i data-lucide="mail" style="width: 16px; color: #3b82f6;"></i> Share Report to Email
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="email" id="shareEmailInput" placeholder="Enter recipient email" style="flex: 1; padding: 0.5rem; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem;">
+                                    <select id="shareEmailMode" style="padding: 0.5rem; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 0.85rem; background: white; color: #475569;">
+                                        <option value="quick">Quick Insight</option>
+                                        <option value="detailed">Detailed Insight</option>
+                                        <option value="advisor">Advisor Insight</option>
+                                    </select>
+                                </div>
+                                <button onclick="shareViaEmail()" id="shareEmailBtn" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem; background: #3b82f6; width: 100%;">Send Consolidated Report</button>
+                            </div>
+                            <div id="shareEmailStatus" style="font-size: 0.75rem; margin-top: 0.5rem; display: none;"></div>
+                        </div>
                     </div>
                 </div>
 
